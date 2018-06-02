@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?eclipse version="3.0"?>
+
+<!--
+-->
+
+<plugin>
+
+   <extension point="org.eclipse.ui.newWizards">
+      <!-- @generated loadbalancing -->
+      <category
+            id="org.eclipse.emf.ecore.Wizard.category.ID"
+            name="%_UI_Wizard_category"/>
+      <wizard
+            id="org.palladiosimulator.loadbalancingaction.loadbalancing.presentation.LoadbalancingModelWizardID"
+            name="%_UI_LoadbalancingModelWizard_label"
+            class="org.palladiosimulator.loadbalancingaction.loadbalancing.presentation.LoadbalancingModelWizard"
+            category="org.eclipse.emf.ecore.Wizard.category.ID"
+            icon="icons/full/obj16/LoadbalancingModelFile.gif">
+         <description>%_UI_LoadbalancingModelWizard_description</description>
+         <selection class="org.eclipse.core.resources.IResource"/>
+      </wizard>
+   </extension>
+
+   <extension point="org.eclipse.ui.editors">
+      <!-- @generated loadbalancing -->
+      <editor
+            id="org.palladiosimulator.loadbalancingaction.loadbalancing.presentation.LoadbalancingEditorID"
+            name="%_UI_LoadbalancingEditor_label"
+            icon="icons/full/obj16/LoadbalancingModelFile.gif"
+            extensions="loadbalancing"
+            class="org.palladiosimulator.loadbalancingaction.loadbalancing.presentation.LoadbalancingEditor"
+            contributorClass="org.palladiosimulator.loadbalancingaction.loadbalancing.presentation.LoadbalancingActionBarContributor">
+      </editor>
+   </extension>
+
+</plugin>

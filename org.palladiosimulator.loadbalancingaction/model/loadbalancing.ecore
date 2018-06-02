@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ecore:EPackage xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:ecore="http://www.eclipse.org/emf/2002/Ecore" name="loadbalancing" nsURI="http://org.palladiosimulator/loadbalancingaction"
+    nsPrefix="loadbalancing">
+  <eClassifiers xsi:type="ecore:EClass" name="LoadbalancingAction" eSuperTypes="../../org.palladiosimulator.pcm/model/pcm.ecore#//seff/AbstractInternalControlFlowAction">
+    <eStructuralFeatures xsi:type="ecore:EReference" name="branches_Loadbalancing"
+        ordered="false" upperBound="-1" eType="#//LoadbalancingBranchTransition" containment="true"
+        eOpposite="#//LoadbalancingBranchTransition/loadbalancingAction_LoadbalancingBranchTransition"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="loadbalancingStrategy"
+        lowerBound="1" eType="#//LoadbalancingStrategy" defaultValueLiteral="RANDOM"/>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EClass" name="LoadbalancingBranchTransition" eSuperTypes="../../org.palladiosimulator.pcm/model/pcm.ecore#//core/entity/Entity">
+    <eStructuralFeatures xsi:type="ecore:EReference" name="loadbalancingAction_LoadbalancingBranchTransition"
+        lowerBound="1" eType="#//LoadbalancingAction" eOpposite="#//LoadbalancingAction/branches_Loadbalancing"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="branchBehaviour_LoadbalancingBranchTransition"
+        lowerBound="1" eType="#//LoadbalancingResourceDemandingBehaviour" containment="true"
+        eOpposite="#//LoadbalancingResourceDemandingBehaviour/loadbalancingBranchTransition_LoadbalancingResourceDemandingBehaviour"/>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EClass" name="LoadbalancingResourceDemandingBehaviour"
+      eSuperTypes="../../org.palladiosimulator.pcm/model/pcm.ecore#//seff/ResourceDemandingBehaviour">
+    <eStructuralFeatures xsi:type="ecore:EReference" name="loadbalancingBranchTransition_LoadbalancingResourceDemandingBehaviour"
+        eType="#//LoadbalancingBranchTransition" eOpposite="#//LoadbalancingBranchTransition/branchBehaviour_LoadbalancingBranchTransition"/>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EEnum" name="LoadbalancingStrategy">
+    <eLiterals name="RANDOM"/>
+    <eLiterals name="JOBSLOT_FIRSTFIT" value="1"/>
+  </eClassifiers>
+</ecore:EPackage>

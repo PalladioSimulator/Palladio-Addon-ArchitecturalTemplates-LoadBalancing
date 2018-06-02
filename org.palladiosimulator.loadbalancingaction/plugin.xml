@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?eclipse version="3.4"?>
+<plugin>
+
+   <extension point="org.eclipse.emf.ecore.generated_package">
+      <!-- @generated loadbalancing -->
+      <package
+            uri="http://org.palladiosimulator/loadbalancingaction"
+            class="org.palladiosimulator.loadbalancingaction.loadbalancing.LoadbalancingPackage"
+            genModel="model/loadbalancing.genmodel"/>
+   </extension>
+
+   <extension point="org.eclipse.emf.ecore.extension_parser">
+      <!-- @generated loadbalancing -->
+      <parser
+            type="loadbalancing"
+            class="org.palladiosimulator.loadbalancingaction.loadbalancing.util.LoadbalancingResourceFactoryImpl"/>
+   </extension>
+   <extension
+         point="org.palladiosimulator.simulizar.interpreter.rdseffswitch">
+      <rdseffswitch
+            rdseffswitch="org.palladiosimulator.loadbalancingaction.rdseff.LoadbalancingRDSeffSwitchFactory">
+      </rdseffswitch>
+   </extension>
+   <extension
+         point="org.palladiosimulator.simulizar.runtimestate.runtimestateaccessor">
+      <runtimeStateAccessor
+            accessor="org.palladiosimulator.loadbalancingaction.observer.RuntimeStateAccessor">
+      </runtimeStateAccessor>
+   </extension>
+</plugin>
