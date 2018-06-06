@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?eclipse version="3.4"?>
+<plugin>
+   <extension point="org.modelversioning.emfprofile.profile">
+     <profile profile_resource="profiles/StaticResourceContainerLoadbalancing.emfprofile_diagram"/>
+   </extension>
+   <extension point="org.modelversioning.emfprofile.profile">
+     <profile profile_resource="profiles/MiddlewarePassiveResource.emfprofile_diagram"/>
+   </extension>
+   <extension
+         point="org.palladiosimulator.architecturaltemplates.catalogs">
+      <ATCatalog
+            catalogURI="loadbalancingaction.architecturaltemplates#_2eRmoCOzEeSLXszsY50NUw">
+      </ATCatalog>
+   </extension>
+</plugin>

@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<org.palladiosimulator.architecturaltemplates:Catalog xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:org.palladiosimulator.architecturaltemplates="http://palladiosimulator.org/ArchitecturalTemplates/1.0" id="_2eRmoCOzEeSLXszsY50NUw" entityName="Default AT Catalog">
+  <ATs id="_LjXtcLuIEeS4YqzUTAgFdw" entityName="LoadbalancingAction - Static Resource Container Loadbalancing " documentation="" defaultInstanceURI="">
+    <roles id="_OVB8wLuIEeS4YqzUTAgFdA" entityName="StaticResourceContainerLoadbalancingSystem">
+      <stereotype href="profiles/StaticResourceContainerLoadbalancing.emfprofile_diagram#_rXqFsL0NEeSXc41T9TupKQ"/>
+      <completion xsi:type="org.palladiosimulator.architecturaltemplates:QVTOCompletion" completionFileURI="StaticResourceContainerLoadbalancing.qvto">
+        <parameters xsi:type="org.palladiosimulator.architecturaltemplates:PCMBlackboardCompletionParameter">
+          <fileExtension xsi:type="org.palladiosimulator.architecturaltemplates:PCMFileExtension" fileExtension="allocation"/>
+        </parameters>
+        <parameters xsi:type="org.palladiosimulator.architecturaltemplates:PCMBlackboardCompletionParameter">
+          <fileExtension xsi:type="org.palladiosimulator.architecturaltemplates:GenericFileExtension" fileExtension="measuringpoint"/>
+        </parameters>
+        <parameters xsi:type="org.palladiosimulator.architecturaltemplates:PCMBlackboardCompletionParameter">
+          <fileExtension xsi:type="org.palladiosimulator.architecturaltemplates:PCMFileExtension" fileExtension="monitorrepository"/>
+        </parameters>
+      </completion>
+      <constraints xsi:type="org.palladiosimulator.architecturaltemplates:OCLConstraint" id="_iRkeQUTxEeWX9I6sz1f4mQ" entityName="System is Static Resource Container Loadbalancing System" expression="self.oclIsTypeOf(StaticResourceContainerLoadbalancingSystem)"/>
+      <constraints xsi:type="org.palladiosimulator.architecturaltemplates:OCLConstraint" id="_LghLgUT1EeWX9I6sz1f4mQ" entityName="Resource Environment has at least one Static Loadbalanced Resource Container" expression="self.appliedTo.oclAsType(pcm::system::System).getResourceEnvironment().resourceContainer_ResourceEnvironment->select(r|r.hasAppliedStereotype('StaticLoadbalancedResourceContainer'))->size()>=1"/>
+      <constraints xsi:type="org.palladiosimulator.architecturaltemplates:OCLConstraint" id="_CYHzEUyJEeWru9L6DwDf4w" entityName="Static Loadbalanced Resource Container has Assembly Contexts" expression="self.appliedTo.oclAsType(pcm::system::System).getAllocation().allocationContexts_Allocation->select(ac|ac.resourceContainer_AllocationContext.hasAppliedStereotype('StaticLoadbalancedResourceContainer'))->collect(ac|ac.assemblyContext_AllocationContext)->size()>0"/>
+    </roles>
+    <roles id="_QxvPwLuIEeS4YqzUTAgFdA" entityName="StaticLoadbalancedResourceContainer">
+      <stereotype href="profiles/StaticResourceContainerLoadbalancing.emfprofile_diagram#_4S2w0L0NEeSXc41T9TupKQ"/>
+      <constraints xsi:type="org.palladiosimulator.architecturaltemplates:OCLConstraint" id="_YhgqsbLUEeWONf-2GJUY0g" entityName="Number of Replicas greater 0" expression="self.numberOfReplicas>0"/>
+    </roles>
+  </ATs>
+  <ATs id="_IYU28ExgEeiYCe5Yu6fDjw" entityName="LoadbalancingAction - Middleware Passive Resource" documentation="Creates Passive Resource on Resource Containers that are aquired and released before the annotated component is executed." defaultInstanceURI="MiddlewarePassiveResource/" dependencies="_LjXtcLuIEeS4YqzUTAgFdw">
+    <roles id="_S0n2sExgEeiYCe5Yu6fDjQ" entityName="Middleware Dependency">
+      <stereotype href="profiles/MiddlewarePassiveResource.emfprofile_diagram#_R9aKwEx0EeiYCe5Yu6fDjQ"/>
+      <completion xsi:type="org.palladiosimulator.architecturaltemplates:QVTOCompletion" completionFileURI="MiddlewarePassiveResource.emfprofile_diagram">
+        <parameters xsi:type="org.palladiosimulator.architecturaltemplates:PCMBlackboardCompletionParameter">
+          <fileExtension xsi:type="org.palladiosimulator.architecturaltemplates:PCMFileExtension" fileExtension="allocation"/>
+        </parameters>
+        <parameters xsi:type="org.palladiosimulator.architecturaltemplates:PCMBlackboardCompletionParameter">
+          <fileExtension xsi:type="org.palladiosimulator.architecturaltemplates:PCMFileExtension" fileExtension="repository"/>
+        </parameters>
+        <parameters xsi:type="org.palladiosimulator.architecturaltemplates:PCMTemplateCompletionParameter" templateFileURI="MiddlewarePassiveResource/MiddlewarePassiveResource.repository">
+          <fileExtension xsi:type="org.palladiosimulator.architecturaltemplates:PCMFileExtension" fileExtension="repository"/>
+        </parameters>
+      </completion>
+      <constraints xsi:type="org.palladiosimulator.architecturaltemplates:OCLConstraint" id="_GprtYExsEeiYCe5Yu6fDjQ" entityName="Amount required Resources at least 0" expression="self.numberRequiredResources>=0"/>
+    </roles>
+    <roles id="_4u77sExpEeiYCe5Yu6fDjQ" entityName="Middleware Host">
+      <stereotype href="profiles/MiddlewarePassiveResource.emfprofile_diagram#_qSGIkExyEeiYCe5Yu6fDjQ"/>
+      <constraints xsi:type="org.palladiosimulator.architecturaltemplates:OCLConstraint" id="_JXnlMExqEeiYCe5Yu6fDjQ" entityName="Capacity of Passive Resource at least 0" expression="self.capacity>=0"/>
+    </roles>
+  </ATs>
+</org.palladiosimulator.architecturaltemplates:Catalog>

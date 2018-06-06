@@ -26,14 +26,14 @@ import de.uka.ipd.sdq.simucomframework.variables.StackContext;
 /**
  * Determines branch transition based on the free job slots on the resource containers. If no slots
  * are free, jobs are put into a queue. Caution: Makes assumptions about the model, should only be
- * used in combination with MiddlewarePassiveResource AT and StaticResourceContainer AT.
+ * used in combination with LoadbalancingActionMiddlewarePassiveResource AT and LoadbalancingActionStaticResourceContainer AT.
  *
  * @author Patrick Firnkes
  *
  */
 public class JobSlotFirstFitStrategy implements Strategy {
     private static final String MIDDLEWARE_PASSIVE_RESOURCE_COMPONENT_NAME = "MiddlewarePassiveResource";
-    private static final String REQUIRED_SLOTS_PARAMETER_SPECIFICATION = "REQUIRED_SLOTS.VALUE";
+    private static final String REQUIRED_SLOTS_PARAMETER_SPECIFICATION = "NUMBER_REQUIRED_RESOURCES.VALUE";
 
     public static final Queue<SimuComSimProcess> JOB_QUEUE = new LinkedList<SimuComSimProcess>();
 
@@ -50,8 +50,8 @@ public class JobSlotFirstFitStrategy implements Strategy {
                 .clone();
         assemblyStackWithoutInstanceAssemblyContext.pop();
 
+        Long requiredSlots = getRequiredSlots();
         while (true) {
-            Long requiredSlots = getRequiredSlots();
             for (LoadbalancingBranchTransition branchTransition : branchTransitions) {
                 AssemblyConnector assemblyConnectorToLoadbalanced = findAssemblyConnectorToLoadbalancedComponent(
                         branchTransition);
