@@ -26,7 +26,8 @@ import de.uka.ipd.sdq.simucomframework.variables.StackContext;
 /**
  * Determines branch transition based on the free job slots on the resource containers. If no slots
  * are free, jobs are put into a queue. Caution: Makes assumptions about the model, should only be
- * used in combination with LoadbalancingActionMiddlewarePassiveResource AT and LoadbalancingActionStaticResourceContainer AT.
+ * used in combination with LoadbalancingActionMiddlewarePassiveResource AT and
+ * LoadbalancingActionStaticResourceContainer AT.
  *
  * @author Patrick Firnkes
  *
@@ -51,6 +52,7 @@ public class JobSlotFirstFitStrategy implements Strategy {
         assemblyStackWithoutInstanceAssemblyContext.pop();
 
         Long requiredSlots = getRequiredSlots();
+        boolean wokeUp = false;
         while (true) {
             for (LoadbalancingBranchTransition branchTransition : branchTransitions) {
                 AssemblyConnector assemblyConnectorToLoadbalanced = findAssemblyConnectorToLoadbalancedComponent(
@@ -60,13 +62,24 @@ public class JobSlotFirstFitStrategy implements Strategy {
 
                 ResourceContainer container = findResourceContainer(loadbalancedAssemblyContext);
                 long freeSlots = findFreeSlotsOfContainer(container);
+                long remainingSlots = freeSlots - requiredSlots;
 
-                if (freeSlots - requiredSlots >= 0) {
+                if (remainingSlots >= 0) {
+                    // wokeUp means resources got freed. Because the resources could be enough for several jobs we have to start
+                    // more than one, if there a slots remaining.
+                    if (wokeUp && remainingSlots > 0) {
+                        wakeUpNext();
+                    }
                     return branchTransition;
                 }
             }
             // no possible branch found, sleep and get woke up when other jobs finish
+            if (wokeUp) {
+                // Maybe some other sleeping job needs less slots and can be started.
+                wakeUpNext();
+            }
             putThreadInQueueAndPassivate();
+            wokeUp = true;
         }
     }
 
@@ -174,5 +187,12 @@ public class JobSlotFirstFitStrategy implements Strategy {
     private void putThreadInQueueAndPassivate() {
         JOB_QUEUE.add(context.getThread());
         context.getThread().passivate();
-    };
+    }
+
+    private void wakeUpNext() {
+        SimuComSimProcess next = JOB_QUEUE.poll();
+        if (next != null) {
+            next.activate();
+        }
+    }
 }
