@@ -623,7 +623,6 @@ constructor ActiveResourceMeasuringPoint::ActiveResourceMeasuringPoint(counter :
 constructor MeasurementSpecification::MeasurementSpecification(newMonitor: Monitor, originalSpecification: MeasurementSpecification){
     metricDescription := originalSpecification.metricDescription;
     monitor := newMonitor;
-    name := originalSpecification.name;
     triggersSelfAdaptations := originalSpecification.triggersSelfAdaptations;
     if (originalSpecification.processingType != null){
         processingType := originalSpecification.processingType.deepclone();
