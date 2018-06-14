@@ -625,7 +625,9 @@ constructor MeasurementSpecification::MeasurementSpecification(newMonitor: Monit
     monitor := newMonitor;
     name := originalSpecification.name;
     triggersSelfAdaptations := originalSpecification.triggersSelfAdaptations;
-    processingType := originalSpecification.processingType.deepclone();
+    if (originalSpecification.processingType != null){
+        processingType := originalSpecification.processingType.deepclone();
+    }
 }
 
 
