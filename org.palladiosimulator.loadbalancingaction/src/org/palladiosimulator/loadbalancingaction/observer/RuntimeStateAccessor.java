@@ -13,6 +13,6 @@ public class RuntimeStateAccessor implements IRuntimeStateAccessor {
     @Override
     public void setRuntimeStateModel(AbstractSimuLizarRuntimeState state) {
         this.runtimeState = state;
-        runtimeState.getEventNotificationHelper().addObserver(new FinishedJobsListener());
+        runtimeState.getEventNotificationHelper().addObserver(new FinishedJobsListener(state.getMainContext()));
     }
 }

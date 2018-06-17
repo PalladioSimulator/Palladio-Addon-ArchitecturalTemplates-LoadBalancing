@@ -1,11 +1,14 @@
 package org.palladiosimulator.loadbalancingaction.strategy;
 
-import java.util.LinkedList;
-import java.util.Queue;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Stack;
 import java.util.stream.Stream;
 import org.eclipse.emf.common.util.EList;
 import org.palladiosimulator.loadbalancingaction.loadbalancing.LoadbalancingBranchTransition;
+import org.palladiosimulator.pcm.allocation.Allocation;
 import org.palladiosimulator.pcm.allocation.AllocationContext;
 import org.palladiosimulator.pcm.core.composition.AssemblyConnector;
 import org.palladiosimulator.pcm.core.composition.AssemblyContext;
@@ -16,6 +19,7 @@ import org.palladiosimulator.pcm.resourceenvironment.ResourceContainer;
 import org.palladiosimulator.pcm.seff.ExternalCallAction;
 import org.palladiosimulator.simulizar.exceptions.PCMModelInterpreterException;
 import org.palladiosimulator.simulizar.interpreter.InterpreterDefaultContext;
+import org.palladiosimulator.simulizar.runtimestate.ComponentInstanceRegistry;
 import org.palladiosimulator.simulizar.runtimestate.FQComponentID;
 import org.palladiosimulator.simulizar.runtimestate.SimulatedBasicComponentInstance;
 import org.palladiosimulator.simulizar.utils.SimulatedStackHelper;
@@ -32,55 +36,92 @@ import de.uka.ipd.sdq.simucomframework.variables.StackContext;
  * @author Patrick Firnkes
  *
  */
-public class JobSlotFirstFitStrategy implements Strategy {
+public class JobSlotFirstFitStrategy extends AbstractStrategy {
+
     private static final String MIDDLEWARE_PASSIVE_RESOURCE_COMPONENT_NAME = "MiddlewarePassiveResource";
     private static final String REQUIRED_SLOTS_PARAMETER_SPECIFICATION = "NUMBER_REQUIRED_RESOURCES.VALUE";
 
-    public static final Queue<SimuComSimProcess> JOB_QUEUE = new LinkedList<SimuComSimProcess>();
+    private static final LinkedHashMap<Long, SimuComSimProcess> JOB_QUEUE = new LinkedHashMap<Long, SimuComSimProcess>();
+    private static final HashMap<LoadbalancingBranchTransition, ResourceContainer> BRANCH_MAPPING = new HashMap<LoadbalancingBranchTransition, ResourceContainer>();
+    private static final HashMap<ResourceContainer, Long> RESOURCE_CONTAINER_SLOTS = new HashMap<ResourceContainer, Long>();
 
-    private InterpreterDefaultContext context;
+    private Allocation allocation;
     private Stack<AssemblyContext> assemblyStackWithoutInstanceAssemblyContext;
+    private ComponentInstanceRegistry componentRegistry;
+
+    public JobSlotFirstFitStrategy(InterpreterDefaultContext context) {
+        super(context);
+
+        allocation = context.getLocalPCMModelAtContextCreation().getAllocation();
+        componentRegistry = context.getRuntimeState().getComponentInstanceRegistry();
+    }
 
     @SuppressWarnings("unchecked")
     @Override
-    public LoadbalancingBranchTransition determineBranch(EList<LoadbalancingBranchTransition> branchTransitions,
-            InterpreterDefaultContext context) {
-
-        this.context = context;
+    public LoadbalancingBranchTransition determineBranch(EList<LoadbalancingBranchTransition> branchTransitions) {
         assemblyStackWithoutInstanceAssemblyContext = (Stack<AssemblyContext>) context.getAssemblyContextStack()
                 .clone();
         assemblyStackWithoutInstanceAssemblyContext.pop();
 
         Long requiredSlots = getRequiredSlots();
-        boolean wokeUp = false;
-        while (true) {
-            for (LoadbalancingBranchTransition branchTransition : branchTransitions) {
-                AssemblyConnector assemblyConnectorToLoadbalanced = findAssemblyConnectorToLoadbalancedComponent(
-                        branchTransition);
-                AssemblyContext loadbalancedAssemblyContext = assemblyConnectorToLoadbalanced
-                        .getProvidingAssemblyContext_AssemblyConnector();
 
-                ResourceContainer container = findResourceContainer(loadbalancedAssemblyContext);
-                long freeSlots = findFreeSlotsOfContainer(container);
+        boolean wokeUp = false;
+
+        while (true) {
+            long maxFreeSlots = 0;
+            for (LoadbalancingBranchTransition branchTransition : branchTransitions) {
+
+                ResourceContainer container = getResourceContainer(branchTransition);
+
+                Long freeSlots = getFreeSlots(container);
+
+                if (freeSlots > maxFreeSlots)
+                    maxFreeSlots = freeSlots;
                 long remainingSlots = freeSlots - requiredSlots;
 
+                // wokeUp means resources got freed. Because the resources could be enough for
+                // several jobs we have to start more than one, if there a slots remaining.
+                if (wokeUp && remainingSlots > 0) {
+                    wakeUpFitting(remainingSlots);
+                }
+
                 if (remainingSlots >= 0) {
-                    // wokeUp means resources got freed. Because the resources could be enough for several jobs we have to start
-                    // more than one, if there a slots remaining.
-                    if (wokeUp && remainingSlots > 0) {
-                        wakeUpNext();
-                    }
+                    RESOURCE_CONTAINER_SLOTS.put(container, remainingSlots);
                     return branchTransition;
                 }
             }
+
             // no possible branch found, sleep and get woke up when other jobs finish
             if (wokeUp) {
                 // Maybe some other sleeping job needs less slots and can be started.
-                wakeUpNext();
+                wakeUpFitting(maxFreeSlots);
             }
-            putThreadInQueueAndPassivate();
+            putThreadInQueueAndPassivate(requiredSlots, context);
             wokeUp = true;
         }
+    }
+
+    private Long getFreeSlots(ResourceContainer container) {
+        Long freeSlots = RESOURCE_CONTAINER_SLOTS.get(container);
+        if (freeSlots == null) {
+            freeSlots = findFreeSlotsOfContainer(container);
+            RESOURCE_CONTAINER_SLOTS.put(container, freeSlots);
+        }
+        return freeSlots;
+    }
+
+    private ResourceContainer getResourceContainer(LoadbalancingBranchTransition branchTransition) {
+        ResourceContainer container = BRANCH_MAPPING.get(branchTransition);
+        if (container == null) {
+            AssemblyConnector assemblyConnectorToLoadbalanced = findAssemblyConnectorToLoadbalancedComponent(
+                    branchTransition);
+            AssemblyContext loadbalancedAssemblyContext = assemblyConnectorToLoadbalanced
+                    .getProvidingAssemblyContext_AssemblyConnector();
+
+            container = findResourceContainer(loadbalancedAssemblyContext);
+            BRANCH_MAPPING.put(branchTransition, container);
+        }
+        return container;
     }
 
     private Long getRequiredSlots() {
@@ -110,7 +151,7 @@ public class JobSlotFirstFitStrategy implements Strategy {
     }
 
     private ResourceContainer findResourceContainer(AssemblyContext providingAssemblyContext) {
-        return context.getLocalPCMModelAtContextCreation().getAllocation().getAllocationContexts_Allocation().stream()
+        return allocation.getAllocationContexts_Allocation().stream()
                 .filter(alloc -> alloc
                         .getAssemblyContext_AllocationContext().getId().equals(providingAssemblyContext.getId()))
                 .findFirst()
@@ -135,8 +176,7 @@ public class JobSlotFirstFitStrategy implements Strategy {
     }
 
     private AssemblyContext findMiddlewarePassiveAssembly(ResourceContainer container) {
-        Stream<AllocationContext> allocsOnContainer = context.getLocalPCMModelAtContextCreation().getAllocation()
-                .getAllocationContexts_Allocation().stream()
+        Stream<AllocationContext> allocsOnContainer = allocation.getAllocationContexts_Allocation().stream()
                 .filter(alloc -> alloc.getResourceContainer_AllocationContext().equals(container));
 
         AssemblyContext middlewarePassiveAssembly = allocsOnContainer
@@ -161,9 +201,9 @@ public class JobSlotFirstFitStrategy implements Strategy {
          * to wrong results, because the probability function is evaluated a second time when the
          * passive resource is actually created.
          */
-        SimulatedStackHelper.createAndPushNewStackFrame(this.context.getStack(),
+        SimulatedStackHelper.createAndPushNewStackFrame(context.getStack(),
                 middlewarePassiveAssembly.getConfigParameterUsages__AssemblyContext(),
-                this.context.getStack().currentStackFrame());
+                context.getStack().currentStackFrame());
 
         long capacity = StackContext.evaluateStatic(passiveResource.getCapacity_PassiveResource().getSpecification(),
                 Long.class, context.getStack().currentStackFrame());
@@ -172,7 +212,7 @@ public class JobSlotFirstFitStrategy implements Strategy {
     }
 
     private boolean isComponentRegistered(FQComponentID fqID) {
-        return context.getRuntimeState().getComponentInstanceRegistry().hasComponentInstance(fqID);
+        return componentRegistry.hasComponentInstance(fqID);
     }
 
     @SuppressWarnings("unchecked")
@@ -184,15 +224,36 @@ public class JobSlotFirstFitStrategy implements Strategy {
         return fqID;
     }
 
-    private void putThreadInQueueAndPassivate() {
-        JOB_QUEUE.add(context.getThread());
+    private void putThreadInQueueAndPassivate(long requiredSlots, InterpreterDefaultContext context) {
+        JOB_QUEUE.put(requiredSlots, context.getThread());
         context.getThread().passivate();
     }
 
-    private void wakeUpNext() {
-        SimuComSimProcess next = JOB_QUEUE.poll();
-        if (next != null) {
-            next.activate();
+    public void wakeUpFitting(long freeSlots) {
+        for (Iterator<Map.Entry<Long, SimuComSimProcess>> it = JOB_QUEUE.entrySet().iterator(); it.hasNext();) {
+            Map.Entry<Long, SimuComSimProcess> entry = it.next();
+            if (entry.getKey() <= freeSlots) {
+                it.remove();
+                entry.getValue().activate();
+                return;
+            }
         }
+    }
+
+    public void wakeUpNext() {
+        Iterator<Map.Entry<Long, SimuComSimProcess>> it = JOB_QUEUE.entrySet().iterator();
+        if (it.hasNext()) {
+            SimuComSimProcess thread = it.next().getValue();
+            it.remove();
+            thread.activate();
+        }
+    }
+
+    public void resetFreeSlotsOfContainer(ResourceContainer container) {
+        RESOURCE_CONTAINER_SLOTS.remove(container);
+    }
+
+    public void resetAllFreeSlots() {
+        RESOURCE_CONTAINER_SLOTS.clear();
     }
 }

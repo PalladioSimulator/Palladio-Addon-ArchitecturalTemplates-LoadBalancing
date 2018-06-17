@@ -98,7 +98,7 @@ public class LoadbalancingRDSeffSwitch extends LoadbalancingSwitch<Object> imple
             LOGGER.debug(sb.toString());
         }
 
-        final Strategy strategy = StrategyFactory.createStrategy(object.getLoadbalancingStrategy());
+        final Strategy strategy = StrategyFactory.createStrategy(object.getLoadbalancingStrategy(), this.context);
         if (strategy == null) {
             LOGGER.error("No load balancing strategy selected: " + object);
             throw new PCMModelInterpreterException("No load balancer balancing strategy selected. This is not allowed.");
@@ -107,7 +107,7 @@ public class LoadbalancingRDSeffSwitch extends LoadbalancingSwitch<Object> imple
             LOGGER.debug("Selected load balancing strategy: " + strategy.getClass().toString());
         }
 
-        final LoadbalancingBranchTransition loadBalancerBranchTransition = strategy.determineBranch(loadbalancerBranchTransitions, this.context);
+        final LoadbalancingBranchTransition loadBalancerBranchTransition = strategy.determineBranch(loadbalancerBranchTransitions);
 
         if (loadBalancerBranchTransition == null) {
             LOGGER.error("No branch selected: " + object);
