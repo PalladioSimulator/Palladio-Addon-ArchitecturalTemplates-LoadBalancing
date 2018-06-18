@@ -38,15 +38,17 @@ import de.uka.ipd.sdq.simucomframework.variables.StackContext;
  */
 public class JobSlotFirstFitStrategy extends AbstractStrategy {
 
-    private static final String MIDDLEWARE_PASSIVE_RESOURCE_COMPONENT_NAME = "MiddlewarePassiveResource";
-    private static final String REQUIRED_SLOTS_PARAMETER_SPECIFICATION = "NUMBER_REQUIRED_RESOURCES.VALUE";
+    public static final String MIDDLEWARE_PASSIVE_RESOURCE_COMPONENT_NAME = "MiddlewarePassiveResource";
+    public static final String REQUIRED_SLOTS_PARAMETER_SPECIFICATION = "NUMBER_REQUIRED_RESOURCES.VALUE";
+    public static final String COMPUTE_COMPONENT_NAME = "computeJob";
 
     private static final LinkedHashMap<Long, SimuComSimProcess> JOB_QUEUE = new LinkedHashMap<Long, SimuComSimProcess>();
     private static final HashMap<LoadbalancingBranchTransition, ResourceContainer> BRANCH_MAPPING = new HashMap<LoadbalancingBranchTransition, ResourceContainer>();
     private static final HashMap<ResourceContainer, Long> RESOURCE_CONTAINER_SLOTS = new HashMap<ResourceContainer, Long>();
 
+    private static Stack<AssemblyContext> assemblyStackWithoutInstanceAssemblyContext;
+
     private Allocation allocation;
-    private Stack<AssemblyContext> assemblyStackWithoutInstanceAssemblyContext;
     private ComponentInstanceRegistry componentRegistry;
 
     public JobSlotFirstFitStrategy(InterpreterDefaultContext context) {
@@ -64,19 +66,15 @@ public class JobSlotFirstFitStrategy extends AbstractStrategy {
         assemblyStackWithoutInstanceAssemblyContext.pop();
 
         Long requiredSlots = getRequiredSlots();
-
         boolean wokeUp = false;
 
         while (true) {
-            long maxFreeSlots = 0;
             for (LoadbalancingBranchTransition branchTransition : branchTransitions) {
 
                 ResourceContainer container = getResourceContainer(branchTransition);
 
                 Long freeSlots = getFreeSlots(container);
 
-                if (freeSlots > maxFreeSlots)
-                    maxFreeSlots = freeSlots;
                 long remainingSlots = freeSlots - requiredSlots;
 
                 // wokeUp means resources got freed. Because the resources could be enough for
@@ -90,12 +88,7 @@ public class JobSlotFirstFitStrategy extends AbstractStrategy {
                     return branchTransition;
                 }
             }
-
             // no possible branch found, sleep and get woke up when other jobs finish
-            if (wokeUp) {
-                // Maybe some other sleeping job needs less slots and can be started.
-                wakeUpFitting(maxFreeSlots);
-            }
             putThreadInQueueAndPassivate(requiredSlots, context);
             wokeUp = true;
         }
@@ -240,20 +233,12 @@ public class JobSlotFirstFitStrategy extends AbstractStrategy {
         }
     }
 
-    public void wakeUpNext() {
-        Iterator<Map.Entry<Long, SimuComSimProcess>> it = JOB_QUEUE.entrySet().iterator();
-        if (it.hasNext()) {
-            SimuComSimProcess thread = it.next().getValue();
-            it.remove();
-            thread.activate();
-        }
+    public void jobFinished(AssemblyContext assembly) {
+        ResourceContainer container = findResourceContainer(assembly);
+        Long freeSlots = findFreeSlotsOfContainer(container);
+        RESOURCE_CONTAINER_SLOTS.put(container, freeSlots);
+
+        wakeUpFitting(freeSlots);
     }
 
-    public void resetFreeSlotsOfContainer(ResourceContainer container) {
-        RESOURCE_CONTAINER_SLOTS.remove(container);
-    }
-
-    public void resetAllFreeSlots() {
-        RESOURCE_CONTAINER_SLOTS.clear();
-    }
 }

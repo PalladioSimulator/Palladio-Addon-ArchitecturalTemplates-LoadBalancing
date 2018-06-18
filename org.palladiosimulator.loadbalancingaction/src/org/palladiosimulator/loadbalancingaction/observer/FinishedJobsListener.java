@@ -1,10 +1,11 @@
 package org.palladiosimulator.loadbalancingaction.observer;
 
 import org.palladiosimulator.loadbalancingaction.strategy.JobSlotFirstFitStrategy;
-import org.palladiosimulator.pcm.usagemodel.UsageScenario;
+import org.palladiosimulator.pcm.repository.ProvidedRole;
+import org.palladiosimulator.pcm.repository.Signature;
 import org.palladiosimulator.simulizar.interpreter.InterpreterDefaultContext;
 import org.palladiosimulator.simulizar.interpreter.listener.AbstractInterpreterListener;
-import org.palladiosimulator.simulizar.interpreter.listener.ModelElementPassedEvent;
+import org.palladiosimulator.simulizar.interpreter.listener.AssemblyProvidedOperationPassedEvent;
 
 /**
  * Listens to interpreter events to detect finished jobs in order to wake up sleeping threads and
@@ -20,21 +21,15 @@ public class FinishedJobsListener extends AbstractInterpreterListener {
         this.context = mainContext;
     }
 
-    /*
-     * (non-Javadoc)
-     *
-     * @see de.upb.pcm.interpreter.interpreter.listener.IInterpreterListener#
-     * endUsageScenarioInterpretation
-     * (de.upb.pcm.interpreter.interpreter.listener.ModelElementPassedEvent)
-     */
     @Override
-    public void endUsageScenarioInterpretation(final ModelElementPassedEvent<UsageScenario> event) {
-        // TODO: this could be optimized by listening to
-        // endAssemblyProvidedOperationCallInterpretation and calling
-        // resetFreeSlotsOfContainer and wakeUpFitting.
-        JobSlotFirstFitStrategy strategy = new JobSlotFirstFitStrategy(context);
-        strategy.resetAllFreeSlots();
-        strategy.wakeUpNext();
-    }
+    public <R extends ProvidedRole, S extends Signature> void endAssemblyProvidedOperationCallInterpretation(
+            AssemblyProvidedOperationPassedEvent<R, S> event) {
 
+        if (event.getModelElement().getProvidingEntity_ProvidedRole().getEntityName()
+                .equals(JobSlotFirstFitStrategy.COMPUTE_COMPONENT_NAME)) {
+
+            JobSlotFirstFitStrategy strategy = new JobSlotFirstFitStrategy(context);
+            strategy.jobFinished(event.getAssemblyContext());
+        }
+    }
 }
