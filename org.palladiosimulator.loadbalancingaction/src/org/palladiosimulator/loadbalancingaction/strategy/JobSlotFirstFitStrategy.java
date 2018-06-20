@@ -44,7 +44,7 @@ public class JobSlotFirstFitStrategy extends AbstractStrategy {
     public static final String REQUIRED_SLOTS_PARAMETER_SPECIFICATION = "NUMBER_REQUIRED_RESOURCES.VALUE";
     public static final String COMPUTE_COMPONENT_NAME = "computeJob";
 
-    private static final int QUEUE_LENGTH_TO_SEARCH = 50;
+    private static final int QUEUE_LENGTH_TO_SEARCH = 5;
 
     private static final ArrayList<Entry<Long, SimuComSimProcess>> JOB_QUEUE = new ArrayList<Entry<Long, SimuComSimProcess>>();
     private static final HashMap<LoadbalancingBranchTransition, ResourceContainer> BRANCH_MAPPING = new HashMap<LoadbalancingBranchTransition, ResourceContainer>();
@@ -72,8 +72,9 @@ public class JobSlotFirstFitStrategy extends AbstractStrategy {
         Long requiredSlots = getRequiredSlots();
         boolean wokeUp = false;
 
-        if (!JOB_QUEUE.isEmpty()) {
+        if (hasToBeQueued(requiredSlots)) {
             putThreadInQueueAndPassivate(requiredSlots, context);
+            wokeUp = true;
         }
 
         while (true) {
@@ -85,14 +86,15 @@ public class JobSlotFirstFitStrategy extends AbstractStrategy {
 
                 long remainingSlots = freeSlots - requiredSlots;
 
-                // wokeUp means resources got freed. Because the resources could be enough for
-                // several jobs we have to start more than one, if there a slots remaining.
-                if (wokeUp && remainingSlots > 0) {
-                    wakeUpFitting(remainingSlots);
-                }
-
                 if (remainingSlots >= 0) {
                     RESOURCE_CONTAINER_SLOTS.put(container, remainingSlots);
+
+                    // wokeUp means resources got freed. Because the resources could be enough for
+                    // several jobs we have to start more than one, if there are slots remaining.
+                    if (wokeUp && remainingSlots > 0) {
+                        wakeUpFitting(remainingSlots);
+                    }
+
                     return branchTransition;
                 }
             }
@@ -231,14 +233,29 @@ public class JobSlotFirstFitStrategy extends AbstractStrategy {
         context.getThread().passivate();
     }
 
+    private boolean hasToBeQueued(long requiredSlots) {
+        if (JOB_QUEUE.isEmpty()) {
+            return false;
+        } else if (JOB_QUEUE.size() >= QUEUE_LENGTH_TO_SEARCH) {
+            return true;
+        } else {
+            return JOB_QUEUE.stream().anyMatch(entry -> entry.getKey() <= requiredSlots);
+        }
+    }
+
     public void wakeUpFitting(long freeSlots) {
         int i = 0;
-        for (Iterator<Entry<Long, SimuComSimProcess>> it = JOB_QUEUE.iterator(); it.hasNext() && i < QUEUE_LENGTH_TO_SEARCH;) {
+        for (Iterator<Entry<Long, SimuComSimProcess>> it = JOB_QUEUE.iterator(); it.hasNext()
+                && i < QUEUE_LENGTH_TO_SEARCH;) {
             Entry<Long, SimuComSimProcess> entry = it.next();
             if (entry.getKey() <= freeSlots) {
                 System.out.println("Found thread to wake up");
                 it.remove();
-                entry.getValue().activate();
+                try {
+                    entry.getValue().activate();
+                } catch (IllegalStateException e) {
+                    // Happens at the end of the simulation, do not know why
+                }
                 return;
             }
             i++;
@@ -254,7 +271,7 @@ public class JobSlotFirstFitStrategy extends AbstractStrategy {
         wakeUpFitting(freeSlots);
     }
 
-    public void reset(){
+    public void reset() {
         JOB_QUEUE.clear();
         BRANCH_MAPPING.clear();
         RESOURCE_CONTAINER_SLOTS.clear();
