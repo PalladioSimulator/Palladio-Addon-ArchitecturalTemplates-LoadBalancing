@@ -236,12 +236,14 @@ public class JobSlotFirstFitStrategy extends AbstractStrategy {
         for (Iterator<Entry<Long, SimuComSimProcess>> it = JOB_QUEUE.iterator(); it.hasNext() && i < QUEUE_LENGTH_TO_SEARCH;) {
             Entry<Long, SimuComSimProcess> entry = it.next();
             if (entry.getKey() <= freeSlots) {
+                System.out.println("Found thread to wake up");
                 it.remove();
                 entry.getValue().activate();
                 return;
             }
             i++;
         }
+        System.out.println("Did not find thread to wake up");
     }
 
     public void jobFinished(AssemblyContext assembly) {
