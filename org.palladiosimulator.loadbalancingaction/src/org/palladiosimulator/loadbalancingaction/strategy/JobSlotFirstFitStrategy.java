@@ -1,11 +1,12 @@
 package org.palladiosimulator.loadbalancingaction.strategy;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Stack;
 import java.util.stream.Stream;
+import java.util.AbstractMap.SimpleEntry;
 import org.eclipse.emf.common.util.EList;
 import org.palladiosimulator.loadbalancingaction.loadbalancing.LoadbalancingBranchTransition;
 import org.palladiosimulator.pcm.allocation.Allocation;
@@ -36,13 +37,16 @@ import de.uka.ipd.sdq.simucomframework.variables.StackContext;
  * @author Patrick Firnkes
  *
  */
+
 public class JobSlotFirstFitStrategy extends AbstractStrategy {
 
     public static final String MIDDLEWARE_PASSIVE_RESOURCE_COMPONENT_NAME = "MiddlewarePassiveResource";
     public static final String REQUIRED_SLOTS_PARAMETER_SPECIFICATION = "NUMBER_REQUIRED_RESOURCES.VALUE";
     public static final String COMPUTE_COMPONENT_NAME = "computeJob";
 
-    private static final LinkedHashMap<Long, SimuComSimProcess> JOB_QUEUE = new LinkedHashMap<Long, SimuComSimProcess>();
+    private static final int QUEUE_LENGTH_TO_SEARCH = 50;
+
+    private static final ArrayList<Entry<Long, SimuComSimProcess>> JOB_QUEUE = new ArrayList<Entry<Long, SimuComSimProcess>>();
     private static final HashMap<LoadbalancingBranchTransition, ResourceContainer> BRANCH_MAPPING = new HashMap<LoadbalancingBranchTransition, ResourceContainer>();
     private static final HashMap<ResourceContainer, Long> RESOURCE_CONTAINER_SLOTS = new HashMap<ResourceContainer, Long>();
 
@@ -218,18 +222,21 @@ public class JobSlotFirstFitStrategy extends AbstractStrategy {
     }
 
     private void putThreadInQueueAndPassivate(long requiredSlots, InterpreterDefaultContext context) {
-        JOB_QUEUE.put(requiredSlots, context.getThread());
+        JOB_QUEUE.add(new SimpleEntry<Long, SimuComSimProcess>(requiredSlots, context.getThread()));
+        System.out.println("Put thread to sleep. Queue Length: " + JOB_QUEUE.size());
         context.getThread().passivate();
     }
 
     public void wakeUpFitting(long freeSlots) {
-        for (Iterator<Map.Entry<Long, SimuComSimProcess>> it = JOB_QUEUE.entrySet().iterator(); it.hasNext();) {
-            Map.Entry<Long, SimuComSimProcess> entry = it.next();
+        int i = 0;
+        for (Iterator<Entry<Long, SimuComSimProcess>> it = JOB_QUEUE.iterator(); it.hasNext() && i < QUEUE_LENGTH_TO_SEARCH;) {
+            Entry<Long, SimuComSimProcess> entry = it.next();
             if (entry.getKey() <= freeSlots) {
                 it.remove();
                 entry.getValue().activate();
                 return;
             }
+            i++;
         }
     }
 
@@ -240,5 +247,4 @@ public class JobSlotFirstFitStrategy extends AbstractStrategy {
 
         wakeUpFitting(freeSlots);
     }
-
 }
