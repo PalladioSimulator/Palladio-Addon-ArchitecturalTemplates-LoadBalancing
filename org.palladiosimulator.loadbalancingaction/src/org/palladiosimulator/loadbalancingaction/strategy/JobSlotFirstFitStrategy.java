@@ -72,6 +72,10 @@ public class JobSlotFirstFitStrategy extends AbstractStrategy {
         Long requiredSlots = getRequiredSlots();
         boolean wokeUp = false;
 
+        if (!JOB_QUEUE.isEmpty()) {
+            putThreadInQueueAndPassivate(requiredSlots, context);
+        }
+
         while (true) {
             for (LoadbalancingBranchTransition branchTransition : branchTransitions) {
 
