@@ -247,4 +247,10 @@ public class JobSlotFirstFitStrategy extends AbstractStrategy {
 
         wakeUpFitting(freeSlots);
     }
+
+    public void reset(){
+        JOB_QUEUE.clear();
+        BRANCH_MAPPING.clear();
+        RESOURCE_CONTAINER_SLOTS.clear();
+    }
 }

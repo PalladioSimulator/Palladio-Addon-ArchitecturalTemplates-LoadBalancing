@@ -16,9 +16,12 @@ import org.palladiosimulator.simulizar.interpreter.listener.AssemblyProvidedOper
  */
 public class FinishedJobsListener extends AbstractInterpreterListener {
     private InterpreterDefaultContext context;
+    private JobSlotFirstFitStrategy strategy;
 
     public FinishedJobsListener(InterpreterDefaultContext mainContext) {
         this.context = mainContext;
+        this.strategy = new JobSlotFirstFitStrategy(context);
+        new JobSlotFirstFitStrategy(context).reset();
     }
 
     @Override
@@ -27,8 +30,6 @@ public class FinishedJobsListener extends AbstractInterpreterListener {
 
         if (event.getModelElement().getProvidingEntity_ProvidedRole().getEntityName()
                 .equals(JobSlotFirstFitStrategy.COMPUTE_COMPONENT_NAME)) {
-
-            JobSlotFirstFitStrategy strategy = new JobSlotFirstFitStrategy(context);
             strategy.jobFinished(event.getAssemblyContext());
         }
     }
