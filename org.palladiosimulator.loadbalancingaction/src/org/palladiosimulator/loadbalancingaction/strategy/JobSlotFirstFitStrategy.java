@@ -4,6 +4,7 @@ import java.util.Iterator;
 import org.eclipse.emf.common.util.EList;
 import org.palladiosimulator.loadbalancingaction.loadbalancing.LoadbalancingBranchTransition;
 import org.palladiosimulator.pcm.resourceenvironment.ResourceContainer;
+import org.palladiosimulator.simulizar.exceptions.PCMModelInterpreterException;
 import org.palladiosimulator.simulizar.interpreter.InterpreterDefaultContext;
 import de.uka.ipd.sdq.simucomframework.variables.StackContext;
 import org.palladiosimulator.loadbalancingaction.strategy.JobSlotStrategyHelper;
@@ -79,12 +80,15 @@ public class JobSlotFirstFitStrategy extends AbstractStrategy {
     private LoadbalancingBranchTransition findBranchToContainer(
             EList<LoadbalancingBranchTransition> branchTransitions) {
         for (LoadbalancingBranchTransition branchTransition : branchTransitions) {
-            ResourceContainer container = JobSlotStrategyHelper.getResourceContainerForBranch(branchTransition, context);
+            ResourceContainer container = JobSlotStrategyHelper.getResourceContainerForBranch(branchTransition,
+                    context);
             if (container.equals(targetContainer)) {
 
                 Long freeSlots = JobSlotStrategyHelper.getFreeSlotsOfContainer(container, context);
                 long remainingSlots = freeSlots - requiredSlots;
-                assert remainingSlots >= 0 : "Job got scheduled on container with too less resources";
+                if (remainingSlots >= 0) {
+                    new PCMModelInterpreterException("Job got scheduled on container with too less resources");
+                }
                 JobSlotStrategyHelper.RESOURCE_CONTAINER_SLOTS.put(container, remainingSlots);
 
                 activateMoreOnSameContainer(remainingSlots);
@@ -131,7 +135,7 @@ public class JobSlotFirstFitStrategy extends AbstractStrategy {
                 && i < JobSlotStrategyHelper.QUEUE_LENGTH_TO_SEARCH;) {
             JobSlotFirstFitStrategy job = it.next();
             if (job.requiredSlots <= freeSlots) {
-                System.out.println("Found thread to wake up");
+                System.out.println("Found thread to wake up at position " + i);
                 it.remove();
 
                 activateJobOnContainer(job, container);
@@ -148,7 +152,10 @@ public class JobSlotFirstFitStrategy extends AbstractStrategy {
 
     public void activate() {
         this.wokeUp = true;
-        this.context.getThread().activate();
+        try {
+            this.context.getThread().activate();
+        } catch (IllegalStateException e) {
+        }
     }
 
     public Long getRequiredSlots() {
