@@ -79,7 +79,7 @@ public class JobSlotFirstFitStrategy extends AbstractStrategy {
     private LoadbalancingBranchTransition findBranchToContainer(
             EList<LoadbalancingBranchTransition> branchTransitions) {
         for (LoadbalancingBranchTransition branchTransition : branchTransitions) {
-            ResourceContainer container = JobSlotStrategyHelper.getResourceContainer(branchTransition, context);
+            ResourceContainer container = JobSlotStrategyHelper.getResourceContainerForBranch(branchTransition, context);
             if (container.equals(targetContainer)) {
 
                 Long freeSlots = JobSlotStrategyHelper.getFreeSlotsOfContainer(container, context);

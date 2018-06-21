@@ -84,22 +84,6 @@ public class JobSlotStrategyHelper {
         return container;
     }
 
-    public static ResourceContainer getResourceContainer(LoadbalancingBranchTransition branchTransition,
-            InterpreterDefaultContext context) {
-        ResourceContainer container = BRANCH_MAPPING.get(branchTransition);
-        if (container == null) {
-            AssemblyConnector assemblyConnectorToLoadbalanced = findAssemblyConnectorToLoadbalancedComponent(
-                    branchTransition, context);
-            AssemblyContext loadbalancedAssemblyContext = assemblyConnectorToLoadbalanced
-                    .getProvidingAssemblyContext_AssemblyConnector();
-
-            container = findResourceContainer(loadbalancedAssemblyContext,
-                    context.getLocalPCMModelAtContextCreation().getAllocation());
-            BRANCH_MAPPING.put(branchTransition, container);
-        }
-        return container;
-    }
-
     public static Long getFreeSlotsOfContainer(ResourceContainer container, InterpreterDefaultContext context) {
         Long freeSlots = JobSlotStrategyHelper.RESOURCE_CONTAINER_SLOTS.get(container);
         if (freeSlots == null) {
