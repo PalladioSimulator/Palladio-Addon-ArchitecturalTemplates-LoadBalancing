@@ -1,6 +1,6 @@
 package org.palladiosimulator.loadbalancingaction.observer;
 
-import org.palladiosimulator.loadbalancingaction.strategy.JobSlotFirstFitStrategy;
+import org.palladiosimulator.loadbalancingaction.strategy.JobSlotStrategyHelper;
 import org.palladiosimulator.pcm.repository.ProvidedRole;
 import org.palladiosimulator.pcm.repository.Signature;
 import org.palladiosimulator.simulizar.interpreter.InterpreterDefaultContext;
@@ -16,12 +16,10 @@ import org.palladiosimulator.simulizar.interpreter.listener.AssemblyProvidedOper
  */
 public class FinishedJobsListener extends AbstractInterpreterListener {
     private InterpreterDefaultContext context;
-    private JobSlotFirstFitStrategy strategy;
 
     public FinishedJobsListener(InterpreterDefaultContext mainContext) {
         this.context = mainContext;
-        this.strategy = new JobSlotFirstFitStrategy(context);
-        new JobSlotFirstFitStrategy(context).reset();
+        JobSlotStrategyHelper.reset();
     }
 
     @Override
@@ -29,8 +27,8 @@ public class FinishedJobsListener extends AbstractInterpreterListener {
             AssemblyProvidedOperationPassedEvent<R, S> event) {
 
         if (event.getModelElement().getProvidingEntity_ProvidedRole().getEntityName()
-                .equals(JobSlotFirstFitStrategy.COMPUTE_COMPONENT_NAME)) {
-            strategy.jobFinished(event.getAssemblyContext());
+                .equals(JobSlotStrategyHelper.COMPUTE_COMPONENT_NAME)) {
+            JobSlotStrategyHelper.jobFinished(event.getAssemblyContext(), context);
         }
     }
 }

@@ -1,32 +1,12 @@
 package org.palladiosimulator.loadbalancingaction.strategy;
 
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.Iterator;
-import java.util.Map.Entry;
-import java.util.Stack;
-import java.util.stream.Stream;
-import java.util.AbstractMap.SimpleEntry;
 import org.eclipse.emf.common.util.EList;
 import org.palladiosimulator.loadbalancingaction.loadbalancing.LoadbalancingBranchTransition;
-import org.palladiosimulator.pcm.allocation.Allocation;
-import org.palladiosimulator.pcm.allocation.AllocationContext;
-import org.palladiosimulator.pcm.core.composition.AssemblyConnector;
-import org.palladiosimulator.pcm.core.composition.AssemblyContext;
-import org.palladiosimulator.pcm.repository.BasicComponent;
-import org.palladiosimulator.pcm.repository.PassiveResource;
-import org.palladiosimulator.pcm.repository.RequiredRole;
 import org.palladiosimulator.pcm.resourceenvironment.ResourceContainer;
-import org.palladiosimulator.pcm.seff.ExternalCallAction;
-import org.palladiosimulator.simulizar.exceptions.PCMModelInterpreterException;
 import org.palladiosimulator.simulizar.interpreter.InterpreterDefaultContext;
-import org.palladiosimulator.simulizar.runtimestate.ComponentInstanceRegistry;
-import org.palladiosimulator.simulizar.runtimestate.FQComponentID;
-import org.palladiosimulator.simulizar.runtimestate.SimulatedBasicComponentInstance;
-import org.palladiosimulator.simulizar.utils.SimulatedStackHelper;
-
-import de.uka.ipd.sdq.simucomframework.SimuComSimProcess;
 import de.uka.ipd.sdq.simucomframework.variables.StackContext;
+import org.palladiosimulator.loadbalancingaction.strategy.JobSlotStrategyHelper;
 
 /**
  * Determines branch transition based on the free job slots on the resource containers. If no slots
@@ -40,222 +20,121 @@ import de.uka.ipd.sdq.simucomframework.variables.StackContext;
 
 public class JobSlotFirstFitStrategy extends AbstractStrategy {
 
-    public static final String MIDDLEWARE_PASSIVE_RESOURCE_COMPONENT_NAME = "MiddlewarePassiveResource";
-    public static final String REQUIRED_SLOTS_PARAMETER_SPECIFICATION = "NUMBER_REQUIRED_RESOURCES.VALUE";
-    public static final String COMPUTE_COMPONENT_NAME = "computeJob";
-
-    private static final int QUEUE_LENGTH_TO_SEARCH = 5;
-
-    private static final ArrayList<Entry<Long, SimuComSimProcess>> JOB_QUEUE = new ArrayList<Entry<Long, SimuComSimProcess>>();
-    private static final HashMap<LoadbalancingBranchTransition, ResourceContainer> BRANCH_MAPPING = new HashMap<LoadbalancingBranchTransition, ResourceContainer>();
-    private static final HashMap<ResourceContainer, Long> RESOURCE_CONTAINER_SLOTS = new HashMap<ResourceContainer, Long>();
-
-    private static Stack<AssemblyContext> assemblyStackWithoutInstanceAssemblyContext;
-
-    private Allocation allocation;
-    private ComponentInstanceRegistry componentRegistry;
+    private ResourceContainer targetContainer;
+    private Long requiredSlots;
+    private boolean wokeUp;
 
     public JobSlotFirstFitStrategy(InterpreterDefaultContext context) {
         super(context);
+        wokeUp = false;
 
-        allocation = context.getLocalPCMModelAtContextCreation().getAllocation();
-        componentRegistry = context.getRuntimeState().getComponentInstanceRegistry();
+        if (JobSlotStrategyHelper.SYSTEM_ASSEMBLY_CONTEXT == null) {
+            JobSlotStrategyHelper.SYSTEM_ASSEMBLY_CONTEXT = context.getAssemblyContextStack().get(0);
+        }
     }
 
-    @SuppressWarnings("unchecked")
     @Override
     public LoadbalancingBranchTransition determineBranch(EList<LoadbalancingBranchTransition> branchTransitions) {
-        assemblyStackWithoutInstanceAssemblyContext = (Stack<AssemblyContext>) context.getAssemblyContextStack()
-                .clone();
-        assemblyStackWithoutInstanceAssemblyContext.pop();
 
-        Long requiredSlots = getRequiredSlots();
-        boolean wokeUp = false;
+        requiredSlots = evaluateRequiredSlots();
 
-        if (hasToBeQueued(requiredSlots)) {
-            putThreadInQueueAndPassivate(requiredSlots, context);
-            wokeUp = true;
-        }
-
-        while (true) {
-            for (LoadbalancingBranchTransition branchTransition : branchTransitions) {
-
-                ResourceContainer container = getResourceContainer(branchTransition);
-
-                Long freeSlots = getFreeSlots(container);
-
-                long remainingSlots = freeSlots - requiredSlots;
-
-                if (remainingSlots >= 0) {
-                    RESOURCE_CONTAINER_SLOTS.put(container, remainingSlots);
-
-                    // wokeUp means resources got freed. Because the resources could be enough for
-                    // several jobs we have to start more than one, if there are slots remaining.
-                    if (wokeUp && remainingSlots > 0) {
-                        wakeUpFitting(remainingSlots);
-                    }
-
-                    return branchTransition;
-                }
-            }
-            // no possible branch found, sleep and get woke up when other jobs finish
-            putThreadInQueueAndPassivate(requiredSlots, context);
-            wokeUp = true;
-        }
-    }
-
-    private Long getFreeSlots(ResourceContainer container) {
-        Long freeSlots = RESOURCE_CONTAINER_SLOTS.get(container);
-        if (freeSlots == null) {
-            freeSlots = findFreeSlotsOfContainer(container);
-            RESOURCE_CONTAINER_SLOTS.put(container, freeSlots);
-        }
-        return freeSlots;
-    }
-
-    private ResourceContainer getResourceContainer(LoadbalancingBranchTransition branchTransition) {
-        ResourceContainer container = BRANCH_MAPPING.get(branchTransition);
-        if (container == null) {
-            AssemblyConnector assemblyConnectorToLoadbalanced = findAssemblyConnectorToLoadbalancedComponent(
-                    branchTransition);
-            AssemblyContext loadbalancedAssemblyContext = assemblyConnectorToLoadbalanced
-                    .getProvidingAssemblyContext_AssemblyConnector();
-
-            container = findResourceContainer(loadbalancedAssemblyContext);
-            BRANCH_MAPPING.put(branchTransition, container);
-        }
-        return container;
-    }
-
-    private Long getRequiredSlots() {
-        return StackContext.evaluateStatic(REQUIRED_SLOTS_PARAMETER_SPECIFICATION, Long.class,
-                context.getStack().currentStackFrame());
-    }
-
-    private AssemblyConnector findAssemblyConnectorToLoadbalancedComponent(
-            LoadbalancingBranchTransition branchTransition) {
-        final AssemblyContext loadbalancingActionAssembly = context.getAssemblyContextStack().peek();
-
-        RequiredRole requiredRole = branchTransition.getBranchBehaviour_LoadbalancingBranchTransition()
-                .getSteps_Behaviour().stream().filter(ExternalCallAction.class::isInstance)
-                .map(ExternalCallAction.class::cast).map(ExternalCallAction::getRole_ExternalService).findFirst()
-                .orElseThrow(() -> new PCMModelInterpreterException(
-                        "No ExternalCallAction with OperationRequiredRole for loadbalancing branch found."));
-
-        AssemblyConnector assemblyConnector = loadbalancingActionAssembly.getParentStructure__AssemblyContext()
-                .getConnectors__ComposedStructure().stream().filter(AssemblyConnector.class::isInstance)
-                .map(AssemblyConnector.class::cast)
-                .filter(a -> a.getRequiringAssemblyContext_AssemblyConnector() == loadbalancingActionAssembly
-                        && a.getRequiredRole_AssemblyConnector() == requiredRole)
-                .findFirst().orElseThrow(() -> new PCMModelInterpreterException(
-                        "Loadbalancing required role is not connected: " + requiredRole));
-
-        return assemblyConnector;
-    }
-
-    private ResourceContainer findResourceContainer(AssemblyContext providingAssemblyContext) {
-        return allocation.getAllocationContexts_Allocation().stream()
-                .filter(alloc -> alloc
-                        .getAssemblyContext_AllocationContext().getId().equals(providingAssemblyContext.getId()))
-                .findFirst()
-                .orElseThrow(() -> new PCMModelInterpreterException(
-                        "No allocation context for assembly context found: " + providingAssemblyContext))
-                .getResourceContainer_AllocationContext();
-    }
-
-    private long findFreeSlotsOfContainer(ResourceContainer container) {
-        AssemblyContext middlewarePassiveAssembly = findMiddlewarePassiveAssembly(container);
-        FQComponentID middlewareFQComponentID = getFQComponentIDForMiddleware(middlewarePassiveAssembly);
-        PassiveResource passiveResource = ((BasicComponent) middlewarePassiveAssembly
-                .getEncapsulatedComponent__AssemblyContext()).getPassiveResource_BasicComponent().get(0);
-
-        long freeSlots;
-        if (isComponentRegistered(middlewareFQComponentID)) {
-            freeSlots = getPassiveResourceAvailable(passiveResource, middlewareFQComponentID);
+        if (JobSlotStrategyHelper.hasToBeQueued(requiredSlots)) {
+            putJobInQueueAndPassivate();
         } else {
-            freeSlots = getPassiveResourceCapacity(middlewarePassiveAssembly, passiveResource);
+            LoadbalancingBranchTransition branchTransition = findBranchWithFreeSlots(branchTransitions, requiredSlots);
+            if (branchTransition == null) {
+                // no possible branch found, sleep and get woke up when other jobs finish
+                putJobInQueueAndPassivate();
+            } else {
+                return branchTransition;
+            }
         }
-        return freeSlots;
+        // if thread is here, he was queued and got woke up. So target container must be set
+        while (!wokeUp) {
+            // Hack: somehow the jobs are activated at the end of the simulation. To avoid
+            // exceptions, put them to sleep again.
+            putJobInQueueAndPassivate();
+        }
+
+        return findBranchToContainer(branchTransitions);
     }
 
-    private AssemblyContext findMiddlewarePassiveAssembly(ResourceContainer container) {
-        Stream<AllocationContext> allocsOnContainer = allocation.getAllocationContexts_Allocation().stream()
-                .filter(alloc -> alloc.getResourceContainer_AllocationContext().equals(container));
+    private LoadbalancingBranchTransition findBranchWithFreeSlots(
+            EList<LoadbalancingBranchTransition> branchTransitions, Long requiredSlots) {
+        for (LoadbalancingBranchTransition branchTransition : branchTransitions) {
 
-        AssemblyContext middlewarePassiveAssembly = allocsOnContainer
-                .map(AllocationContext::getAssemblyContext_AllocationContext)
-                .filter(a -> a.getEncapsulatedComponent__AssemblyContext().getEntityName()
-                        .equals(MIDDLEWARE_PASSIVE_RESOURCE_COMPONENT_NAME))
-                .findFirst().orElseThrow(() -> new PCMModelInterpreterException(
-                        "Did not find middleware passive resource component for resource container: " + container));
-        return middlewarePassiveAssembly;
+            ResourceContainer container = JobSlotStrategyHelper.getResourceContainerForBranch(branchTransition,
+                    context);
+            Long freeSlots = JobSlotStrategyHelper.getFreeSlotsOfContainer(container, context);
+            long remainingSlots = freeSlots - requiredSlots;
+
+            if (remainingSlots >= 0) {
+                JobSlotStrategyHelper.RESOURCE_CONTAINER_SLOTS.put(container, remainingSlots);
+                return branchTransition;
+            }
+        }
+        return null;
     }
 
-    private long getPassiveResourceAvailable(PassiveResource passiveResource, FQComponentID middlewareFQComponentID) {
-        SimulatedBasicComponentInstance simulatedInstance = ((SimulatedBasicComponentInstance) context.getRuntimeState()
-                .getComponentInstanceRegistry().getComponentInstance(middlewareFQComponentID));
-        return simulatedInstance.getAvailablePassiveResource(passiveResource, context);
+    private LoadbalancingBranchTransition findBranchToContainer(
+            EList<LoadbalancingBranchTransition> branchTransitions) {
+        for (LoadbalancingBranchTransition branchTransition : branchTransitions) {
+            ResourceContainer container = JobSlotStrategyHelper.getResourceContainer(branchTransition, context);
+            if (container.equals(targetContainer)) {
+
+                Long freeSlots = JobSlotStrategyHelper.getFreeSlotsOfContainer(container, context);
+                long remainingSlots = freeSlots - requiredSlots;
+                assert remainingSlots >= 0 : "Job got scheduled on container with too less resources";
+                JobSlotStrategyHelper.RESOURCE_CONTAINER_SLOTS.put(container, remainingSlots);
+
+                activateMoreOnSameContainer(remainingSlots);
+
+                return branchTransition;
+            }
+        }
+        return null;
     }
 
-    private long getPassiveResourceCapacity(AssemblyContext middlewarePassiveAssembly,
-            PassiveResource passiveResource) {
-        /*
-         * TODO: Important! Usage of probability functions for passive resource capacity would lead
-         * to wrong results, because the probability function is evaluated a second time when the
-         * passive resource is actually created.
-         */
-        SimulatedStackHelper.createAndPushNewStackFrame(context.getStack(),
-                middlewarePassiveAssembly.getConfigParameterUsages__AssemblyContext(),
+    private void activateMoreOnSameContainer(long remainingSlots) {
+        // wokeUp means resources got freed. Because the resources could be enough
+        // for several jobs we have to start more than one, if there are slots
+        // remaining.
+        if (remainingSlots > 0) {
+            activateFitting(targetContainer);
+        }
+    }
+
+    private Long evaluateRequiredSlots() {
+        return StackContext.evaluateStatic(JobSlotStrategyHelper.REQUIRED_SLOTS_PARAMETER_SPECIFICATION, Long.class,
                 context.getStack().currentStackFrame());
-
-        long capacity = StackContext.evaluateStatic(passiveResource.getCapacity_PassiveResource().getSpecification(),
-                Long.class, context.getStack().currentStackFrame());
-        context.getStack().removeStackFrame();
-        return capacity;
     }
 
-    private boolean isComponentRegistered(FQComponentID fqID) {
-        return componentRegistry.hasComponentInstance(fqID);
-    }
-
-    @SuppressWarnings("unchecked")
-    private FQComponentID getFQComponentIDForMiddleware(AssemblyContext middleware) {
-        Stack<AssemblyContext> assemblyStack = (Stack<AssemblyContext>) assemblyStackWithoutInstanceAssemblyContext
-                .clone();
-        assemblyStack.push(middleware);
-        FQComponentID fqID = new FQComponentID(assemblyStack);
-        return fqID;
-    }
-
-    private void putThreadInQueueAndPassivate(long requiredSlots, InterpreterDefaultContext context) {
-        JOB_QUEUE.add(new SimpleEntry<Long, SimuComSimProcess>(requiredSlots, context.getThread()));
-        System.out.println("Put thread to sleep. Queue Length: " + JOB_QUEUE.size());
+    private void putJobInQueueAndPassivate() {
+        JobSlotStrategyHelper.JOB_QUEUE.add(this);
+        System.out.println("Put job to sleep. Queue Length: " + JobSlotStrategyHelper.JOB_QUEUE.size());
         context.getThread().passivate();
     }
 
-    private boolean hasToBeQueued(long requiredSlots) {
-        if (JOB_QUEUE.isEmpty()) {
-            return false;
-        } else if (JOB_QUEUE.size() >= QUEUE_LENGTH_TO_SEARCH) {
-            return true;
-        } else {
-            return JOB_QUEUE.stream().anyMatch(entry -> entry.getKey() <= requiredSlots);
-        }
+    private void activateJobOnContainer(JobSlotFirstFitStrategy job, ResourceContainer container) {
+        job.setTargetContainer(container);
+        job.activate();
+
     }
 
-    public void wakeUpFitting(long freeSlots) {
+    public void activateFitting(ResourceContainer container) {
+        Long freeSlots = JobSlotStrategyHelper.RESOURCE_CONTAINER_SLOTS.get(container);
+        if (freeSlots == 0) {
+            return;
+        }
         int i = 0;
-        for (Iterator<Entry<Long, SimuComSimProcess>> it = JOB_QUEUE.iterator(); it.hasNext()
-                && i < QUEUE_LENGTH_TO_SEARCH;) {
-            Entry<Long, SimuComSimProcess> entry = it.next();
-            if (entry.getKey() <= freeSlots) {
+        for (Iterator<JobSlotFirstFitStrategy> it = JobSlotStrategyHelper.JOB_QUEUE.iterator(); it.hasNext()
+                && i < JobSlotStrategyHelper.QUEUE_LENGTH_TO_SEARCH;) {
+            JobSlotFirstFitStrategy job = it.next();
+            if (job.requiredSlots <= freeSlots) {
                 System.out.println("Found thread to wake up");
                 it.remove();
-                try {
-                    entry.getValue().activate();
-                } catch (IllegalStateException e) {
-                    // Happens at the end of the simulation, do not know why
-                }
+
+                activateJobOnContainer(job, container);
                 return;
             }
             i++;
@@ -263,17 +142,16 @@ public class JobSlotFirstFitStrategy extends AbstractStrategy {
         System.out.println("Did not find thread to wake up");
     }
 
-    public void jobFinished(AssemblyContext assembly) {
-        ResourceContainer container = findResourceContainer(assembly);
-        Long freeSlots = findFreeSlotsOfContainer(container);
-        RESOURCE_CONTAINER_SLOTS.put(container, freeSlots);
-
-        wakeUpFitting(freeSlots);
+    public void setTargetContainer(ResourceContainer container) {
+        this.targetContainer = container;
     }
 
-    public void reset() {
-        JOB_QUEUE.clear();
-        BRANCH_MAPPING.clear();
-        RESOURCE_CONTAINER_SLOTS.clear();
+    public void activate() {
+        this.wokeUp = true;
+        this.context.getThread().activate();
+    }
+
+    public Long getRequiredSlots() {
+        return requiredSlots;
     }
 }
