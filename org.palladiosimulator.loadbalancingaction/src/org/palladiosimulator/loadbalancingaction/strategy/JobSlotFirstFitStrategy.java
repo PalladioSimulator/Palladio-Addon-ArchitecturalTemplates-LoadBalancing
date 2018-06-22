@@ -1,6 +1,5 @@
 package org.palladiosimulator.loadbalancingaction.strategy;
 
-import java.util.Iterator;
 import org.eclipse.emf.common.util.EList;
 import org.palladiosimulator.loadbalancingaction.loadbalancing.LoadbalancingBranchTransition;
 import org.palladiosimulator.pcm.resourceenvironment.ResourceContainer;
@@ -104,7 +103,7 @@ public class JobSlotFirstFitStrategy extends AbstractStrategy {
         // for several jobs we have to start more than one, if there are slots
         // remaining.
         if (remainingSlots > 0) {
-            activateFitting(targetContainer);
+            JobSlotStrategyHelper.activateFitting(targetContainer);
         }
     }
 
@@ -117,33 +116,6 @@ public class JobSlotFirstFitStrategy extends AbstractStrategy {
         JobSlotStrategyHelper.JOB_QUEUE.add(this);
         System.out.println("Put job to sleep. Queue Length: " + JobSlotStrategyHelper.JOB_QUEUE.size());
         context.getThread().passivate();
-    }
-
-    private void activateJobOnContainer(JobSlotFirstFitStrategy job, ResourceContainer container) {
-        job.setTargetContainer(container);
-        job.activate();
-
-    }
-
-    public void activateFitting(ResourceContainer container) {
-        Long freeSlots = JobSlotStrategyHelper.RESOURCE_CONTAINER_SLOTS.get(container);
-        if (freeSlots == 0) {
-            return;
-        }
-        int i = 0;
-        for (Iterator<JobSlotFirstFitStrategy> it = JobSlotStrategyHelper.JOB_QUEUE.iterator(); it.hasNext()
-                && i < JobSlotStrategyHelper.QUEUE_LENGTH_TO_SEARCH;) {
-            JobSlotFirstFitStrategy job = it.next();
-            if (job.requiredSlots <= freeSlots) {
-                System.out.println("Found thread to wake up at position " + i);
-                it.remove();
-
-                activateJobOnContainer(job, container);
-                return;
-            }
-            i++;
-        }
-        System.out.println("Did not find thread to wake up");
     }
 
     public void setTargetContainer(ResourceContainer container) {

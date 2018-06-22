@@ -93,6 +93,27 @@ public class JobSlotStrategyHelper {
         return freeSlots;
     }
 
+
+    public static void activateFitting(ResourceContainer container) {
+        Long freeSlots = RESOURCE_CONTAINER_SLOTS.get(container);
+        if (freeSlots == 0) {
+            return;
+        }
+        int i = 0;
+        for (Iterator<JobSlotFirstFitStrategy> it = JOB_QUEUE.iterator(); it.hasNext() && i < QUEUE_LENGTH_TO_SEARCH;) {
+            JobSlotFirstFitStrategy job = it.next();
+            if (job.getRequiredSlots() <= freeSlots) {
+                System.out.println("Found thread to wake up at position " + i);
+                it.remove();
+
+                activateJobOnContainer(job, container);
+                return;
+            }
+            i++;
+        }
+        System.out.println("Did not find thread to wake up");
+    }
+
     private static long findFreeSlotsOfContainer(ResourceContainer container, InterpreterDefaultContext context) {
         AssemblyContext middlewarePassiveAssembly = findMiddlewarePassiveAssembly(container,
                 context.getLocalPCMModelAtContextCreation().getAllocation());
@@ -170,25 +191,6 @@ public class JobSlotStrategyHelper {
         return fqID;
     }
 
-    private static void activateFitting(ResourceContainer container) {
-        Long freeSlots = RESOURCE_CONTAINER_SLOTS.get(container);
-        if (freeSlots == 0) {
-            return;
-        }
-        int i = 0;
-        for (Iterator<JobSlotFirstFitStrategy> it = JOB_QUEUE.iterator(); it.hasNext() && i < QUEUE_LENGTH_TO_SEARCH;) {
-            JobSlotFirstFitStrategy job = it.next();
-            if (job.getRequiredSlots() <= freeSlots) {
-                System.out.println("Found thread to wake up");
-                it.remove();
-
-                activateJobOnContainer(job, container);
-                return;
-            }
-            i++;
-        }
-        System.out.println("Did not find thread to wake up");
-    }
 
     private static void activateJobOnContainer(JobSlotFirstFitStrategy job, ResourceContainer container) {
         job.setTargetContainer(container);
