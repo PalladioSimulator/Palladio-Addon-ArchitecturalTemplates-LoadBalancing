@@ -90,7 +90,7 @@ public class JobSlotFirstFitStrategy extends AbstractStrategy {
                 }
                 JobSlotStrategyHelper.RESOURCE_CONTAINER_SLOTS.put(container, remainingSlots);
 
-                activateMoreOnSameContainer(remainingSlots);
+                // activateMoreOnSameContainer(remainingSlots);
 
                 return branchTransition;
             }

@@ -32,7 +32,7 @@ public class JobSlotStrategyHelper {
     public static final ArrayList<JobSlotFirstFitStrategy> JOB_QUEUE = new ArrayList<JobSlotFirstFitStrategy>();
     public static final HashMap<LoadbalancingBranchTransition, ResourceContainer> BRANCH_MAPPING = new HashMap<LoadbalancingBranchTransition, ResourceContainer>();
     public static final HashMap<ResourceContainer, Long> RESOURCE_CONTAINER_SLOTS = new HashMap<ResourceContainer, Long>();
-    public static final int QUEUE_LENGTH_TO_SEARCH = 10;
+    public static final int QUEUE_LENGTH_TO_SEARCH = 1;
 
     public static AssemblyContext SYSTEM_ASSEMBLY_CONTEXT;
 
