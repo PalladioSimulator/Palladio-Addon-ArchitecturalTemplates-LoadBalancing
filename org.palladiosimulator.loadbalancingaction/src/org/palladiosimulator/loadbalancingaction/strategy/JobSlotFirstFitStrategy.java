@@ -30,6 +30,7 @@ public class JobSlotFirstFitStrategy extends AbstractStrategy {
 
         if (JobSlotStrategyHelper.SYSTEM_ASSEMBLY_CONTEXT == null) {
             JobSlotStrategyHelper.SYSTEM_ASSEMBLY_CONTEXT = context.getAssemblyContextStack().get(0);
+            JobSlotStrategyHelper.isActive = true;
         }
     }
 

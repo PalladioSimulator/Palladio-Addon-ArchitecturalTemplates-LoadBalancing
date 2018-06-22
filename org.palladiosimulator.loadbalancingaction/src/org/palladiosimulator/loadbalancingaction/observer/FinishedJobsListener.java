@@ -20,13 +20,14 @@ public class FinishedJobsListener extends AbstractInterpreterListener {
     public FinishedJobsListener(InterpreterDefaultContext mainContext) {
         this.context = mainContext;
         JobSlotStrategyHelper.reset();
+
     }
 
     @Override
     public <R extends ProvidedRole, S extends Signature> void endAssemblyProvidedOperationCallInterpretation(
             AssemblyProvidedOperationPassedEvent<R, S> event) {
 
-        if (event.getModelElement().getProvidingEntity_ProvidedRole().getEntityName()
+        if (JobSlotStrategyHelper.isActive && event.getModelElement().getProvidingEntity_ProvidedRole().getEntityName()
                 .equals(JobSlotStrategyHelper.COMPUTE_COMPONENT_NAME)) {
             JobSlotStrategyHelper.jobFinished(event.getAssemblyContext(), context);
         }

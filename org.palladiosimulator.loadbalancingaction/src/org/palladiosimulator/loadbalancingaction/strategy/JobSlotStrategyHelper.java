@@ -34,6 +34,9 @@ public class JobSlotStrategyHelper {
     public static final HashMap<ResourceContainer, Long> RESOURCE_CONTAINER_SLOTS = new HashMap<ResourceContainer, Long>();
     public static final int QUEUE_LENGTH_TO_SEARCH = 1;
 
+    //TODO: determine via applied template which strategy is active
+    public static boolean isActive = false;
+
     public static AssemblyContext SYSTEM_ASSEMBLY_CONTEXT;
 
     public static void jobFinished(AssemblyContext assemblyFinished, InterpreterDefaultContext context) {
@@ -66,6 +69,8 @@ public class JobSlotStrategyHelper {
         JOB_QUEUE.clear();
         BRANCH_MAPPING.clear();
         RESOURCE_CONTAINER_SLOTS.clear();
+        isActive = false;
+        SYSTEM_ASSEMBLY_CONTEXT = null;
     }
 
     public static ResourceContainer getResourceContainerForBranch(LoadbalancingBranchTransition branchTransition,
