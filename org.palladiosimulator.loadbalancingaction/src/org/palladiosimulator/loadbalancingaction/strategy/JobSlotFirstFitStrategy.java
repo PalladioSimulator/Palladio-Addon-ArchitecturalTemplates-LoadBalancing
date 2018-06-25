@@ -20,9 +20,9 @@ import org.palladiosimulator.loadbalancingaction.strategy.JobSlotStrategyHelper;
 
 public class JobSlotFirstFitStrategy extends AbstractStrategy {
 
-    private ResourceContainer targetContainer;
+    private volatile ResourceContainer targetContainer;
     private Long requiredSlots;
-    private boolean wokeUp;
+    private volatile boolean wokeUp;
 
     public JobSlotFirstFitStrategy(InterpreterDefaultContext context) {
         super(context);
