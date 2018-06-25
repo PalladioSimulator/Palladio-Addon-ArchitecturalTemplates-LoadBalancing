@@ -101,7 +101,7 @@ public class JobSlotStrategyHelper {
 
     public static void activateFitting(ResourceContainer container) {
         Long freeSlots = RESOURCE_CONTAINER_SLOTS.get(container);
-        if (freeSlots == 0) {
+        if ((long)freeSlots == 0) {
             return;
         }
         int i = 0;
