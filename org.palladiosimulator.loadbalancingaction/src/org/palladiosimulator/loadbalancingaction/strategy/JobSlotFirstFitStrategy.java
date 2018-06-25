@@ -52,9 +52,9 @@ public class JobSlotFirstFitStrategy extends AbstractStrategy {
         }
         // if thread is here, he was queued and got woke up. So target container must be set
         while (!wokeUp) {
-            // Hack: somehow the jobs are activated at the end of the simulation. To avoid
+            // Hack: somehow the jobs are activated. To avoid
             // exceptions, put them to sleep again.
-            putJobInQueueAndPassivate();
+            context.getThread().passivate();
         }
 
         return findBranchToContainer(branchTransitions);
@@ -125,10 +125,8 @@ public class JobSlotFirstFitStrategy extends AbstractStrategy {
 
     public void activate() {
         this.wokeUp = true;
-        try {
-            this.context.getThread().activate();
-        } catch (IllegalStateException e) {
-        }
+        this.context.getThread().activate();
+
     }
 
     public Long getRequiredSlots() {
