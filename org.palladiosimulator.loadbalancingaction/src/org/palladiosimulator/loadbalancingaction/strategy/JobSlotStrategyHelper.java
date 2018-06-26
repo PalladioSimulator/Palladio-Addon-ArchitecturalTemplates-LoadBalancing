@@ -1,8 +1,11 @@
 package org.palladiosimulator.loadbalancingaction.strategy;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
 import java.util.Stack;
 import java.util.stream.Stream;
 
@@ -29,9 +32,9 @@ public class JobSlotStrategyHelper {
     public static final String REQUIRED_SLOTS_PARAMETER_SPECIFICATION = "NUMBER_REQUIRED_RESOURCES.VALUE";
     public static final String COMPUTE_COMPONENT_NAME = "computeJob";
 
-    public static final ArrayList<JobSlotFirstFitStrategy> JOB_QUEUE = new ArrayList<JobSlotFirstFitStrategy>();
-    public static final HashMap<LoadbalancingBranchTransition, ResourceContainer> BRANCH_MAPPING = new HashMap<LoadbalancingBranchTransition, ResourceContainer>();
-    public static final HashMap<ResourceContainer, Long> RESOURCE_CONTAINER_SLOTS = new HashMap<ResourceContainer, Long>();
+    public static final List<JobSlotFirstFitStrategy> JOB_QUEUE = Collections.synchronizedList(new ArrayList<JobSlotFirstFitStrategy>());
+    public static final Map<LoadbalancingBranchTransition, ResourceContainer> BRANCH_MAPPING = Collections.synchronizedMap(new HashMap<LoadbalancingBranchTransition, ResourceContainer>());
+    public static final Map<ResourceContainer, Long> RESOURCE_CONTAINER_SLOTS = Collections.synchronizedMap(new HashMap<ResourceContainer, Long>());
     public static final int QUEUE_LENGTH_TO_SEARCH = 1;
 
     //TODO: determine via applied template which strategy is active
