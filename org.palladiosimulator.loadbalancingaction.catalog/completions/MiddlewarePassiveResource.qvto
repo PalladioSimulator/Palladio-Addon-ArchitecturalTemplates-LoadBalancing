@@ -11,9 +11,13 @@ modeltype PCMCore uses pcm::core('http://palladiosimulator.org/PalladioComponent
 modeltype PCMComposition uses pcm::core::composition('http://palladiosimulator.org/PalladioComponentModel/5.2');
 modeltype PCMVariable uses pcm::parameter('http://palladiosimulator.org/PalladioComponentModel/5.2');
 modeltype PCMStoex uses stoex('http://sdq.ipd.uka.de/StochasticExpressions/2.2');
+modeltype MEASURINGPPOINTREPO uses 'http://palladiosimulator.org/EDP2/MeasuringPoint/1.0';
+modeltype PCM_MEASURINGPPOINT uses 'http://palladiosimulator.org/PCM/MeasuringPoint/1.0';
+modeltype MONITORREPO uses 'http://palladiosimulator.org/MonitorRepository/1.0';
+modeltype METRICSPEC uses 'http://palladiosimulator.org/MetricSpec/1.0';
 
-
-transformation MiddlewarePassiveResource(inout pcmAllocation : PCM_ALLOC, inout pcmRepository : PCM_REP, in repositoryTemplate : PCM_REP);
+transformation MiddlewarePassiveResource(inout pcmAllocation : PCM_ALLOC, inout pcmRepository : PCM_REP, inout measuringRepo: MEASURINGPPOINTREPO,
+                                         inout monitorRepo: MONITORREPO, in repositoryTemplate : PCM_REP);
 
 property profileName : String = "LoadbalancingActionMiddlewarePassiveResource";
 property componentStereotypeName : String = "MiddlewareDependency";
@@ -21,6 +25,8 @@ property resourceContainerStereotypeName : String = "MiddlewareHost";
 
 property taggedNameResourceCapacity : String = "capacity";
 property taggedNameNumberRequiredResources : String = "numberRequiredResources";
+
+property metricSpecID : String = "_x0-pks7rEeOX_4BzImuHbA";
 
 property allocation : Allocation = pcmAllocation.rootObjects()![Allocation];
 property system : System = allocation.system_Allocation;
@@ -69,6 +75,7 @@ helper doIt(resourceContainers: Set(ResourceContainer), components: Set(BasicCom
     completeRepositoryModel();
     resourceContainers->forEach(container){
         var middlewareAssembly := completeAssemblyModel(container);
+        createMonitor(middlewareAssembly);
         completeAllocationModel(middlewareAssembly, container);
     };
 }
@@ -117,7 +124,7 @@ helper completeAllocationModel(middlewareAssembly: AssemblyContext, container: R
 helper createMiddlewareAssemblyContext(container: ResourceContainer):AssemblyContext{
     var assembly := object AssemblyContext{
         encapsulatedComponent__AssemblyContext := repository.components__Repository->selectOne(e|e.entityName=templateComponentName);
-        entityName := "Assembly_MiddlewarePassiveResource_" + container.entityName;
+        entityName := "Assembly_MiddlewarePassiveResource_" + container.entityName + "_" + container.id;
         parentStructure__AssemblyContext := system;
     };
 
@@ -205,6 +212,33 @@ helper createRequiredRoleForComposite(composite:CompositeComponent, interface:In
                                                         var required_role := new InfrastructureRequiredRole(composite, interface);
                                                         new RequiredInfrastructureDelegationConnector(composite, required_role, assembly);
                                                         };
+}
+
+helper createMonitor(assembly: AssemblyContext){
+    new Monitor(assembly);
+}
+
+constructor Monitor::Monitor(assembly: AssemblyContext){
+    entityName := assembly.entityName + "_PassiveResource";
+    measuringPoint := new AssemblyPassiveResourceMeasuringPoint(assembly);
+    activated := true;
+    monitorRepository := monitorRepo.objectsOfKind(MonitorRepository)->any(true);
+    new MeasurementSpecification(result);
+}
+
+constructor AssemblyPassiveResourceMeasuringPoint::AssemblyPassiveResourceMeasuringPoint(assemblyContext: AssemblyContext){
+    measuringPointRepository := measuringRepo.objectsOfKind(MeasuringPointRepository)->any(true);
+    assembly := assemblyContext;
+    passiveResource := assemblyContext.encapsulatedComponent__AssemblyContext.oclAsType(BasicComponent).passiveResource_BasicComponent->any(true);
+}
+
+constructor MeasurementSpecification::MeasurementSpecification(newMonitor: Monitor){
+    metricDescription := monitorRepo.objectsOfKind(MonitorRepository)->any(true).monitors->any(true).measurementSpecifications->any(true).metricDescription.repository.metricDescriptions->select(m| m.id = metricSpecID)->any(true);
+    monitor := newMonitor;
+    triggersSelfAdaptations := false;
+    processingType := object FeedThrough{
+        measurementSpecification := result;
+        };
 }
 
 mapping inout Interface::changeRepository(){
