@@ -85,13 +85,11 @@ public class JobSlotFirstFitStrategy extends AbstractStrategy {
             if (container.equals(targetContainer)) {
 
                 Long freeSlots = JobSlotStrategyHelper.getFreeSlotsOfContainer(container, context);
-                long remainingSlots = freeSlots - requiredSlots;
-                if (remainingSlots < 0) {
+                if (freeSlots < 0) {
                     throw new PCMModelInterpreterException("Job got scheduled on container with too less resources");
                 }
-                JobSlotStrategyHelper.RESOURCE_CONTAINER_SLOTS.put(container, remainingSlots);
 
-                // activateMoreOnSameContainer(remainingSlots);
+                activateMoreOnSameContainer(freeSlots);
 
                 return branchTransition;
             }

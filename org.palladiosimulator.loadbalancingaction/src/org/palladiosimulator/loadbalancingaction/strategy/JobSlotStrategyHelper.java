@@ -32,12 +32,15 @@ public class JobSlotStrategyHelper {
     public static final String REQUIRED_SLOTS_PARAMETER_SPECIFICATION = "NUMBER_REQUIRED_RESOURCES.VALUE";
     public static final String COMPUTE_COMPONENT_NAME = "computeJob";
 
-    public static final List<JobSlotFirstFitStrategy> JOB_QUEUE = Collections.synchronizedList(new ArrayList<JobSlotFirstFitStrategy>());
-    public static final Map<LoadbalancingBranchTransition, ResourceContainer> BRANCH_MAPPING = Collections.synchronizedMap(new HashMap<LoadbalancingBranchTransition, ResourceContainer>());
-    public static final Map<ResourceContainer, Long> RESOURCE_CONTAINER_SLOTS = Collections.synchronizedMap(new HashMap<ResourceContainer, Long>());
+    public static final List<JobSlotFirstFitStrategy> JOB_QUEUE = Collections
+            .synchronizedList(new ArrayList<JobSlotFirstFitStrategy>());
+    public static final Map<LoadbalancingBranchTransition, ResourceContainer> BRANCH_MAPPING = Collections
+            .synchronizedMap(new HashMap<LoadbalancingBranchTransition, ResourceContainer>());
+    public static final Map<ResourceContainer, Long> RESOURCE_CONTAINER_SLOTS = Collections
+            .synchronizedMap(new HashMap<ResourceContainer, Long>());
     public static final int QUEUE_LENGTH_TO_SEARCH = 1;
 
-    //TODO: determine via applied template which strategy is active
+    // TODO: determine via applied template which strategy is active
     public static boolean isActive = false;
 
     public static AssemblyContext SYSTEM_ASSEMBLY_CONTEXT;
@@ -101,25 +104,54 @@ public class JobSlotStrategyHelper {
         return freeSlots;
     }
 
-
     public static void activateFitting(ResourceContainer container) {
         Long freeSlots = RESOURCE_CONTAINER_SLOTS.get(container);
-        if ((long)freeSlots == 0) {
+        if ((long) freeSlots == 0) {
             return;
         }
         int i = 0;
+        boolean found = false;
         for (Iterator<JobSlotFirstFitStrategy> it = JOB_QUEUE.iterator(); it.hasNext() && i < QUEUE_LENGTH_TO_SEARCH;) {
             JobSlotFirstFitStrategy job = it.next();
             if (job.getRequiredSlots() <= freeSlots) {
                 System.out.println("Found thread to wake up at position " + i);
+                found = true;
                 it.remove();
+                JobSlotStrategyHelper.RESOURCE_CONTAINER_SLOTS.put(container, freeSlots - job.getRequiredSlots());
 
                 activateJobOnContainer(job, container);
-                return;
+                break;
             }
             i++;
         }
-        System.out.println("Did not find thread to wake up");
+        if (found) {
+            // if queue was blocked by head
+            activateOnOtherContainer();
+        } else {
+            System.out.println("Did not find thread to wake up");
+        }
+    }
+
+    private static void activateOnOtherContainer() {
+        JobSlotFirstFitStrategy job = JOB_QUEUE.get(0);
+        boolean found = false;
+        for (Iterator<Map.Entry<ResourceContainer, Long>> it = RESOURCE_CONTAINER_SLOTS.entrySet().iterator(); it
+                .hasNext();) {
+            Map.Entry<ResourceContainer, Long> entry = it.next();
+            if (job.getRequiredSlots() <= entry.getValue()) {
+                System.out.println("Wake up thread on other container.");
+                found = true;
+                JOB_QUEUE.remove(0);
+                JobSlotStrategyHelper.RESOURCE_CONTAINER_SLOTS.put(entry.getKey(), entry.getValue() - job.getRequiredSlots());
+                activateJobOnContainer(job, entry.getKey());
+                break;
+            }
+        }
+        if (found) {
+            activateOnOtherContainer();
+        } else {
+            System.out.println("Queue blocked.");
+        }
     }
 
     private static long findFreeSlotsOfContainer(ResourceContainer container, InterpreterDefaultContext context) {
@@ -198,7 +230,6 @@ public class JobSlotStrategyHelper {
         FQComponentID fqID = new FQComponentID(assemblyStack);
         return fqID;
     }
-
 
     private static void activateJobOnContainer(JobSlotFirstFitStrategy job, ResourceContainer container) {
         job.setTargetContainer(container);
