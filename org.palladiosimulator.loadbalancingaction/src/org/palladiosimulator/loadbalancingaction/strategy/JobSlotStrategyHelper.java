@@ -125,7 +125,9 @@ public class JobSlotStrategyHelper {
             i++;
         }
         if (found) {
-            // if queue was blocked by head
+            // wokeUp means resources got freed. Because the resources could be enough
+            // for several jobs we have to start more than one, if there are slots
+            // remaining. Also this job could jave blocked others.
             activateOnOtherContainer();
         } else {
             System.out.println("Did not find thread to wake up");
@@ -139,7 +141,7 @@ public class JobSlotStrategyHelper {
                 .hasNext();) {
             Map.Entry<ResourceContainer, Long> entry = it.next();
             if (job.getRequiredSlots() <= entry.getValue()) {
-                System.out.println("Wake up thread on other container.");
+                System.out.println("Wake up thread.");
                 found = true;
                 JOB_QUEUE.remove(0);
                 JobSlotStrategyHelper.RESOURCE_CONTAINER_SLOTS.put(entry.getKey(), entry.getValue() - job.getRequiredSlots());

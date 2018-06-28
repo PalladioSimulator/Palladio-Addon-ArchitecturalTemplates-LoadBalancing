@@ -88,22 +88,10 @@ public class JobSlotFirstFitStrategy extends AbstractStrategy {
                 if (freeSlots < 0) {
                     throw new PCMModelInterpreterException("Job got scheduled on container with too less resources");
                 }
-
-                activateMoreOnSameContainer(freeSlots);
-
                 return branchTransition;
             }
         }
         return null;
-    }
-
-    private void activateMoreOnSameContainer(long remainingSlots) {
-        // wokeUp means resources got freed. Because the resources could be enough
-        // for several jobs we have to start more than one, if there are slots
-        // remaining.
-        if (remainingSlots > 0) {
-            JobSlotStrategyHelper.activateFitting(targetContainer);
-        }
     }
 
     private Long evaluateRequiredSlots() {
