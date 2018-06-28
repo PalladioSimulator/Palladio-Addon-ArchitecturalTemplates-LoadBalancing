@@ -15,6 +15,7 @@ modeltype MEASURINGPPOINTREPO uses 'http://palladiosimulator.org/EDP2/MeasuringP
 modeltype PCM_MEASURINGPPOINT uses 'http://palladiosimulator.org/PCM/MeasuringPoint/1.0';
 modeltype MONITORREPO uses 'http://palladiosimulator.org/MonitorRepository/1.0';
 modeltype METRICSPEC uses 'http://palladiosimulator.org/MetricSpec/1.0';
+modeltype RESOURCE_TYPE uses pcm::resourcetype('http://palladiosimulator.org/PalladioComponentModel/5.2');
 
 transformation MiddlewarePassiveResource(inout pcmAllocation : PCM_ALLOC, inout pcmRepository : PCM_REP, inout measuringRepo: MEASURINGPPOINTREPO,
                                          inout monitorRepo: MONITORREPO, in repositoryTemplate : PCM_REP);
@@ -25,6 +26,7 @@ property resourceContainerStereotypeName : String = "MiddlewareHost";
 
 property taggedNameResourceCapacity : String = "capacity";
 property taggedNameNumberRequiredResources : String = "numberRequiredResources";
+property taggedNameSchedulingDelay : String = "schedulingDelay";
 
 property metricSpecID : String = "_x0-pks7rEeOX_4BzImuHbA";
 
@@ -46,6 +48,9 @@ property parameterNameNumberRequiredResources: String = "NUMBER_REQUIRED_RESOURC
 property components: Set(BasicComponent);
 property resourceContainers : Set(ResourceContainer);
 
+property delayResourceType: ProcessingResourceType;
+property delaySchedulingPolicy: SchedulingPolicy;
+
 main() {
     log('AT Completion "Middleware Passive Resource" started');
 
@@ -65,6 +70,12 @@ main() {
     assert fatal(components->notEmpty())
         with log ("There must be a basic component that has the AT role '" + resourceContainerStereotypeName + "' applied!");
 
+    var resourceRepo :=  resourceEnvironment.resourceContainer_ResourceEnvironment->any(true).activeResourceSpecifications_ResourceContainer
+        ->any(true).activeResourceType_ActiveResourceSpecification.resourceRepository_ResourceType;
+
+    delayResourceType := resourceRepo.availableResourceTypes_ResourceRepository->select(r| r.entityName.toLower() = "delay")->any(true).oclAsType(ProcessingResourceType);
+    delaySchedulingPolicy := resourceRepo.schedulingPolicies__ResourceRepository->select(s | s.entityName.toLower() = "delay")->any(true);
+
     doIt(resourceContainers, components);
 
     log('AT Completion "Middleware Passive Resource" finished');
@@ -77,6 +88,7 @@ helper doIt(resourceContainers: Set(ResourceContainer), components: Set(BasicCom
         var middlewareAssembly := completeAssemblyModel(container);
         createMonitor(middlewareAssembly);
         completeAllocationModel(middlewareAssembly, container);
+        addDelayResource();
     };
 }
 
@@ -90,7 +102,7 @@ helper completeRepositoryModel(){
     // we only need to create n-1 infrastructure provided roles as one is already existing in the template
     var is_first := true;
     components->forEach(component){
-    	addParameterToLoadbalancer(component);
+        addParameterToLoadbalancer(component);
         createRequiredRoleSEFFForBasic(component, interface);
         if(is_first){
             is_first := false;
@@ -176,21 +188,21 @@ helper connectWithMiddleware(middleware: AssemblyContext, container: ResourceCon
 }
 
 helper addParameterToLoadbalancer(component: BasicComponent){
-	var operationInterface = component.providedRoles_InterfaceProvidingEntity
-								-> selectByKind(OperationProvidedRole)
-								-> oclAsType(OperationProvidedRole)
-								-> selectOne(true).providedInterface__OperationProvidedRole;
+    var operationInterface = component.providedRoles_InterfaceProvidingEntity
+                                -> selectByKind(OperationProvidedRole)
+                                -> oclAsType(OperationProvidedRole)
+                                -> selectOne(true).providedInterface__OperationProvidedRole;
 
 
-	var loadbalancer :=  repository.components__Repository -> select(comp|comp.requiredRoles_InterfaceRequiringEntity
-															   -> selectByKind(OperationRequiredRole)
-															   -> oclAsType(OperationRequiredRole)
-															   -> select(req|req.requiredInterface__OperationRequiredRole = operationInterface)
-															   -> isEmpty() = false)
-															   -> oclAsType(BasicComponent)
-															   -> selectOne(true);
+    var loadbalancer :=  repository.components__Repository -> select(comp|comp.requiredRoles_InterfaceRequiringEntity
+                                                               -> selectByKind(OperationRequiredRole)
+                                                               -> oclAsType(OperationRequiredRole)
+                                                               -> select(req|req.requiredInterface__OperationRequiredRole = operationInterface)
+                                                               -> isEmpty() = false)
+                                                               -> oclAsType(BasicComponent)
+                                                               -> selectOne(true);
 
-	var variable := new PCMRandomVariable(getStringTaggedValue(component,
+    var variable := new PCMRandomVariable(getStringTaggedValue(component,
                                           taggedNameNumberRequiredResources,
                                           componentStereotypeName).toString());
     addNumberRequiredPassiveParameter(loadbalancer, variable);
@@ -202,7 +214,9 @@ helper createRequiredRoleSEFFForBasic(component:BasicComponent, interface:Infras
 
     component.serviceEffectSpecifications__BasicComponent-> forEach(seff){
     if(seff.oclIsKindOf(ResourceDemandingSEFF))
-        seff.oclAsType(ResourceDemandingSEFF).map insertAcquireReleaseActions(requiredRole);
+        seff.oclAsType(ResourceDemandingSEFF).map insertAcquireReleaseActions(requiredRole, getIntTaggedValue(component,
+                                                                                                              taggedNameSchedulingDelay,
+                                                                                                              componentStereotypeName).toString());
     };
 }
 
@@ -212,6 +226,17 @@ helper createRequiredRoleForComposite(composite:CompositeComponent, interface:In
                                                         var required_role := new InfrastructureRequiredRole(composite, interface);
                                                         new RequiredInfrastructureDelegationConnector(composite, required_role, assembly);
                                                         };
+}
+
+helper addDelayResource(){
+    resourceEnvironment.resourceContainer_ResourceEnvironment->forEach(container){
+        object ProcessingResourceSpecification{
+            activeResourceType_ActiveResourceSpecification := delayResourceType;
+            processingRate_ProcessingResourceSpecification := new PCMRandomVariable("1");
+            schedulingPolicy := delaySchedulingPolicy;
+            resourceContainer_ProcessingResourceSpecification := container;
+        };
+    };
 }
 
 helper createMonitor(assembly: AssemblyContext){
@@ -249,21 +274,42 @@ mapping inout RepositoryComponent::changeRepository(){
     repository__RepositoryComponent := repository;
 }
 
-mapping inout ResourceDemandingSEFF::insertAcquireReleaseActions(requiredRole: InfrastructureRequiredRole){
+mapping inout ResourceDemandingSEFF::insertAcquireReleaseActions(requiredRole: InfrastructureRequiredRole, schedulingDelay: String){
     var startAction := steps_Behaviour->selectOne(action|action.oclIsTypeOf(StartAction));
     var successorStart := startAction.successor_AbstractAction;
 
     var stopAction := steps_Behaviour->selectOne(action|action.oclIsTypeOf(StopAction));
-    var predecessorStart := stopAction.predecessor_AbstractAction;
+    var predecessorStop := stopAction.predecessor_AbstractAction;
 
     var acquireAction := new InternalAction(true, requiredRole, self);
     var releaseAction := new InternalAction(false, requiredRole, self);
 
     startAction.successor_AbstractAction := acquireAction;
-    successorStart.predecessor_AbstractAction := acquireAction;
+    acquireAction.successor_AbstractAction := successorStart;
 
-    stopAction.predecessor_AbstractAction := releaseAction;
-    predecessorStart.successor_AbstractAction := releaseAction;
+    predecessorStop.successor_AbstractAction := releaseAction;
+    releaseAction.successor_AbstractAction := stopAction;
+
+    // workaround because delay action and fork action in the same seff lead to errors, thus
+    // we have to put it in the forked behaviour
+    var branches := steps_Behaviour->selectByKind(BranchAction)->any(true).branches_Branch.branchBehaviour_BranchTransition;
+    branches->forEach(branch){
+        var synchBehaviour := branch.steps_Behaviour->selectByKind(ForkAction).synchronisingBehaviours_ForkAction.synchronousForkedBehaviours_SynchronisationPoint->any(true);
+        var synchBehaviourStop  := synchBehaviour.steps_Behaviour->selectOne(action|action.oclIsTypeOf(StopAction));
+        var synchBehaviourPrecesccorStop  := synchBehaviourStop.predecessor_AbstractAction;
+
+        var delayAction := object InternalAction{
+            entityName := "SchedulingDelayAction";
+            resourceDemandingBehaviour_AbstractAction := synchBehaviour;
+            resourceDemand_Action := object ParametricResourceDemand{
+                requiredResource_ParametricResourceDemand := delayResourceType;
+                specification_ParametericResourceDemand := new PCMRandomVariable(schedulingDelay);
+            };
+        };
+
+        synchBehaviourPrecesccorStop.successor_AbstractAction := delayAction;
+        delayAction.successor_AbstractAction := synchBehaviourStop;
+    }
 }
 
 constructor InfrastructureRequiredRole::InfrastructureRequiredRole(component:RepositoryComponent, interface:InfrastructureInterface){

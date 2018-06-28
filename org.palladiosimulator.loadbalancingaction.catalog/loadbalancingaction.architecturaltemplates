@@ -44,6 +44,7 @@
         </parameters>
       </completion>
       <constraints xsi:type="org.palladiosimulator.architecturaltemplates:OCLConstraint" id="_GprtYExsEeiYCe5Yu6fDjQ" entityName="Amount required Resources at least 0" expression="self.numberRequiredResources>=0"/>
+      <constraints xsi:type="org.palladiosimulator.architecturaltemplates:OCLConstraint" id="_psnVkHrYEeiRss_zRvwBww" entityName="Amount scheduling delay at least 0" expression="self.schedulingDelay>=0"/>
     </roles>
     <roles id="_4u77sExpEeiYCe5Yu6fDjQ" entityName="Middleware Host">
       <stereotype href="profiles/MiddlewarePassiveResource.emfprofile_diagram#_qSGIkExyEeiYCe5Yu6fDjQ"/>

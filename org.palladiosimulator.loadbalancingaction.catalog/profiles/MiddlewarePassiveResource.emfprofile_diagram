@@ -18,6 +18,9 @@
       <eStructuralFeatures xmi:type="ecore:EAttribute" xmi:id="_GvX6IEx2EeiYCe5Yu6fDjQ" name="numberRequiredResources" defaultValueLiteral="1">
         <eType xmi:type="ecore:EDataType" href="http://www.eclipse.org/emf/2002/Ecore#//EString"/>
       </eStructuralFeatures>
+      <eStructuralFeatures xmi:type="ecore:EAttribute" xmi:id="_1pLOMHrYEeiRss_zRvwBww" name="schedulingDelay" defaultValueLiteral="0">
+        <eType xmi:type="ecore:EDataType" href="http://www.eclipse.org/emf/2002/Ecore#//EInt"/>
+      </eStructuralFeatures>
       <extensions xmi:type="emfprofile:Extension" xmi:id="_UspYMEx0EeiYCe5Yu6fDjQ" upperBound="1">
         <target xmi:type="ecore:EClass" href="http://palladiosimulator.org/PalladioComponentModel/5.2#//repository/BasicComponent"/>
       </extensions>
@@ -84,6 +87,9 @@
       <children xmi:type="notation:DecorationNode" xmi:id="_R9ax1Ux0EeiYCe5Yu6fDjQ" type="7008">
         <children xmi:type="notation:Node" xmi:id="_GvZvUEx2EeiYCe5Yu6fDjQ" type="3001" element="_GvX6IEx2EeiYCe5Yu6fDjQ">
           <layoutConstraint xmi:type="notation:Location" xmi:id="_GvZvUUx2EeiYCe5Yu6fDjQ"/>
+        </children>
+        <children xmi:type="notation:Node" xmi:id="_1pxrIHrYEeiRss_zRvwBww" type="3001" element="_1pLOMHrYEeiRss_zRvwBww">
+          <layoutConstraint xmi:type="notation:Location" xmi:id="_1pxrIXrYEeiRss_zRvwBww"/>
         </children>
         <styles xmi:type="notation:SortingStyle" xmi:id="_R9ax1kx0EeiYCe5Yu6fDjQ"/>
         <styles xmi:type="notation:FilteringStyle" xmi:id="_R9ax10x0EeiYCe5Yu6fDjQ"/>
