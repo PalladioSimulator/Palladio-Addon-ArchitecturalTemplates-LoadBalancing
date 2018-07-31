@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?><cq:componentQuery xmlns:cq="http://www.eclipse.org/buckminster/CQuery-1.0" resourceMap="loadbalancingaction.rmap">
+    <cq:rootRequest name="org.palladiosimulator.loadbalancingaction.buckminster" componentType="eclipse.feature"/>
+    <cq:advisorNode namePattern="^org\.palladiosimulator\.license$" sourceLevel="REQUIRE" useWorkspace="false"/>
+    <cq:advisorNode namePattern="^org\.palladiosimulator\.branding$" sourceLevel="REQUIRE" useWorkspace="false"/>
+    <cq:advisorNode namePattern="^org\.palladiosimulator\.loadbalancingaction.*" sourceLevel="REQUIRE" useWorkspace="false"/>
+    <cq:advisorNode namePattern="^org\.palladiosimulator\.pcm$" sourceLevel="REJECT"/>
+    <cq:advisorNode namePattern="^de\.uka\.ipd\.sdq\.simucomframework$" sourceLevel="REJECT"/>
+    <cq:advisorNode namePattern=".*" sourceLevel="REJECT"/>
+</cq:componentQuery>

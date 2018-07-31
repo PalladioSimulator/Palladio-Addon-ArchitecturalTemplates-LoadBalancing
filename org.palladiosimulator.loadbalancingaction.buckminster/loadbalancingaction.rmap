@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rm:rmap xmlns:bc="http://www.eclipse.org/buckminster/Common-1.0" xmlns:rm="http://www.eclipse.org/buckminster/RMap-1.0">
+
+  <rm:property key="resolveFrom" value="release"/>
+
+  <rm:locator pattern="^org\.palladiosimulator\.loadbalancingaction.*" searchPathRef="loadbalancingaction" failOnError="true"/>
+
+  <rm:searchPath name="loadbalancingaction">
+    <rm:provider componentTypes="osgi.bundle,eclipse.feature,buckminster" readerType="git" source="true">
+      <rm:uri format="{0}/GIT,{1}">
+          <bc:propertyRef key="workspace.root" />
+          <bc:propertyRef key="buckminster.component" />
+        </rm:uri>
+      <rm:property key="git.remote.uri" value="https://github.com/PatFirn/Palladio-Loadbalancing-Strategy-Action"/>
+    </rm:provider>
+    <rm:provider resolutionFilter="(resolveFrom=nightly)" componentTypes="osgi.bundle" readerType="p2" source="false" mutable="false">
+      <rm:uri format="https://sdqweb.ipd.kit.edu/eclipse/loadbalancingaction/nightly/"/>
+    </rm:provider>
+    <rm:provider resolutionFilter="(resolveFrom=release)" componentTypes="osgi.bundle" readerType="p2" source="false" mutable="false">
+      <rm:uri format="https://sdqweb.ipd.kit.edu/eclipse/loadbalancingaction/releases/latest/"/>
+    </rm:provider>
+  </rm:searchPath>
+
+</rm:rmap>
