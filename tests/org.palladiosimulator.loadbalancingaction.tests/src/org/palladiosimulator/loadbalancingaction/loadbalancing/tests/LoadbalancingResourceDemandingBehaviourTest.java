@@ -86,4 +86,6 @@ public class LoadbalancingResourceDemandingBehaviourTest extends TestCase {
         this.setFixture(null);
     }
 
+	public void testMethod1(){}
+
 } //LoadbalancingResourceDemandingBehaviourTest

@@ -6,24 +6,24 @@ import junit.framework.TestCase;
 
 import junit.textui.TestRunner;
 
-import org.palladiosimulator.loadbalancingaction.loadbalancing.LoadbalancingAction;
+import org.palladiosimulator.loadbalancingaction.loadbalancing.LoadbalancingBranchTransition;
 import org.palladiosimulator.loadbalancingaction.loadbalancing.LoadbalancingFactory;
 
 /**
  * <!-- begin-user-doc -->
- * A test case for the model object '<em><b>Action</b></em>'.
+ * A test case for the model object '<em><b>Branch Transition</b></em>'.
  * <!-- end-user-doc -->
  * @generated
  */
-public class LoadbalancingActionTest extends TestCase {
+public class LoadbalancingBranchTransitionTest extends TestCase {
 
     /**
-     * The fixture for this Action test case.
+     * The fixture for this Branch Transition test case.
      * <!-- begin-user-doc -->
      * <!-- end-user-doc -->
      * @generated
      */
-    protected LoadbalancingAction fixture = null;
+    protected LoadbalancingBranchTransition fixture = null;
 
     /**
      * <!-- begin-user-doc -->
@@ -31,36 +31,36 @@ public class LoadbalancingActionTest extends TestCase {
      * @generated
      */
     public static void main(final String[] args) {
-        TestRunner.run(LoadbalancingActionTest.class);
+        TestRunner.run(LoadbalancingBranchTransitionTest.class);
     }
 
     /**
-     * Constructs a new Action test case with the given name.
+     * Constructs a new Branch Transition test case with the given name.
      * <!-- begin-user-doc -->
      * <!-- end-user-doc -->
      * @generated
      */
-    public LoadbalancingActionTest(final String name) {
+    public LoadbalancingBranchTransitionTest(final String name) {
         super(name);
     }
 
     /**
-     * Sets the fixture for this Action test case.
+     * Sets the fixture for this Branch Transition test case.
      * <!-- begin-user-doc -->
      * <!-- end-user-doc -->
      * @generated
      */
-    protected void setFixture(final LoadbalancingAction fixture) {
+    protected void setFixture(final LoadbalancingBranchTransition fixture) {
         this.fixture = fixture;
     }
 
     /**
-     * Returns the fixture for this Action test case.
+     * Returns the fixture for this Branch Transition test case.
      * <!-- begin-user-doc -->
      * <!-- end-user-doc -->
      * @generated
      */
-    protected LoadbalancingAction getFixture() {
+    protected LoadbalancingBranchTransition getFixture() {
         return this.fixture;
     }
 
@@ -72,7 +72,7 @@ public class LoadbalancingActionTest extends TestCase {
      */
     @Override
     protected void setUp() throws Exception {
-        this.setFixture(LoadbalancingFactory.eINSTANCE.createLoadbalancingAction());
+        this.setFixture(LoadbalancingFactory.eINSTANCE.createLoadbalancingBranchTransition());
     }
 
     /**
@@ -85,5 +85,7 @@ public class LoadbalancingActionTest extends TestCase {
     protected void tearDown() throws Exception {
         this.setFixture(null);
     }
+	
+	public void testMethod1(){}
 
-} //LoadbalancingActionTest
+} //LoadbalancingBranchTransitionTest
