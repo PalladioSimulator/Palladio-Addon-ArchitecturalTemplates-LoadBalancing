@@ -233,27 +233,6 @@
 		<repository location="https://sdqweb.ipd.kit.edu/eclipse/emf-profiles/nightly/"/>
 	</location>
 	
-	<location includeAllPlatforms="false" includeConfigurePhase="true" includeMode="planner" includeSource="false" type="InstallableUnit" refresh="true">
-		<unit id="org.eclipse.emf.henshin.sdk.feature.group" version="tbd"/>
-		<repository location="http://download.eclipse.org/modeling/emft/henshin/updates/release"/>
-	</location>
-	
-	<location includeAllPlatforms="false" includeConfigurePhase="true" includeMode="planner" includeSource="false" type="InstallableUnit" refresh="true">
-		<unit id="org.eclipse.gmf.tooling.runtime.feature.group" version="tbd"/>
-		<repository location="http://download.eclipse.org/modeling/gmp/gmf-tooling/updates/releases-3.3.1a/"/>
-	</location>
-	
-	<location includeAllPlatforms="false" includeConfigurePhase="true" includeMode="planner" includeSource="false" type="InstallableUnit" filter="release" refresh="true">
-		<unit id="org.storydriven.storydiagrams.feature.feature.group" version="tbd"/>
-		<unit id="org.storydriven.storydiagrams.interpreter.feature.feature.group" version="tbd"/>
-		<repository location="https://sdqweb.ipd.kit.edu/eclipse/storydiagraminterpreter/releases/latest/"/>
-	</location>
-	<location includeAllPlatforms="false" includeConfigurePhase="true" includeMode="planner" includeSource="false" type="InstallableUnit" filter="nightly" refresh="true">
-		<unit id="org.storydriven.storydiagrams.feature.feature.group" version="tbd"/>
-		<unit id="org.storydriven.storydiagrams.interpreter.feature.feature.group" version="tbd"/>
-		<repository location="https://sdqweb.ipd.kit.edu/eclipse/storydiagraminterpreter/nightly/"/>
-	</location>
-	
 	<location includeAllPlatforms="false" includeConfigurePhase="true" includeMode="planner" includeSource="false" type="InstallableUnit" filter="release" refresh="true">
 		<unit id="org.palladiosimulator.experimentanalysis.tests.feature.feature.group" version="tbd"/>
 		<repository location="https://sdqweb.ipd.kit.edu/eclipse/palladio/addons/experimentanalysis/releases/latest/"/>
