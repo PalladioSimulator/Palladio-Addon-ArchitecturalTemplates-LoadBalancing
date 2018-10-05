@@ -1,19 +1,19 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <site>
 	<feature url="features/org.palladiosimulator.loadbalancingaction.feature_1.0.0.qualifier.jar" id="org.palladiosimulator.loadbalancingaction.feature" version="1.0.0.qualifier">
-	   <category name="org.palladiosimulator.addons.category"/>
+	   <category name="org.palladiosimulator.addons.architecturaltemplates.catalogues.category"/>
 	</feature>
 	<feature url="features/org.palladiosimulator.loadbalancingaction.feature.source_1.0.0.qualifier.jar" id="org.palladiosimulator.loadbalancingaction.feature.source" version="1.0.0.qualifier">
-	   <category name="org.palladiosimulator.addons.source.category"/>
+	   <category name="org.palladiosimulator.addons.architecturaltemplates.catalogues.source.category"/>
 	</feature>
-	<category-def name="org.palladiosimulator.addons.category" label="Palladio Bench Addons">
+	<category-def name="org.palladiosimulator.addons.architecturaltemplates.catalogues.category" label="Palladio Bench Addons :: Architectural Templates :: Catalogues">
 	   <description>
-	      Palladio Bench Addons
+	      These features provide additional catalogues including architectural templates
 	   </description>
 	  </category-def>
-	  <category-def name="org.palladiosimulator.addons.source.category" label="Palladio Bench Addons Source">
+	  <category-def name="org.palladiosimulator.addons.architecturaltemplates.catalogues.source.category" label="Palladio Bench Addons :: Architectural Templates :: Catalogues Source">
 	     <description>
-	        Palladio Bench Addons Source
+	        Sources of the Palladio Bench Addons :: Architectural Templates :: Catalogues
 	     </description>
 	  </category-def>
 </site>
