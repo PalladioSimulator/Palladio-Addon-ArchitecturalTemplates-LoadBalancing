@@ -125,7 +125,7 @@ public class LoadbalancingRDSeffSwitch extends LoadbalancingSwitch<Object> imple
      */
     private <T extends AbstractAction> void firePassedEvent(final T abstractAction, final EventType eventType) {
         this.context.getRuntimeState().getEventNotificationHelper().firePassedEvent(new RDSEFFElementPassedEvent<T>(
-                abstractAction, eventType, this.context.getThread(), this.context.getAssemblyContextStack().peek()));
+                abstractAction, eventType, this.context, this.context.getAssemblyContextStack().peek()));
     }
 
 }
