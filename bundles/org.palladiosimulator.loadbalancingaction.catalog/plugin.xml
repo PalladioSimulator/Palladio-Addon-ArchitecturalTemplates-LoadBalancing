@@ -10,7 +10,7 @@
    <extension
          point="org.palladiosimulator.architecturaltemplates.catalogs">
       <ATCatalog
-            catalogURI="loadbalancingaction.architecturaltemplates#_2eRmoCOzEeSLXszsY50NUw">
+            catalogURI="platform:/plugin/org.palladiosimulator.loadbalancingaction.catalog/loadbalancingaction.architecturaltemplates#_2eRmoCOzEeSLXszsY50NUw">
       </ATCatalog>
    </extension>
 </plugin>
