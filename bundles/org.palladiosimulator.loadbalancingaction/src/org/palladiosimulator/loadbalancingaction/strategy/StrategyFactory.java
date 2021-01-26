@@ -1,11 +1,20 @@
 package org.palladiosimulator.loadbalancingaction.strategy;
 
+import javax.inject.Inject;
+import javax.inject.Provider;
+
 import org.palladiosimulator.loadbalancingaction.loadbalancing.LoadbalancingStrategy;
 import org.palladiosimulator.simulizar.interpreter.InterpreterDefaultContext;
 
 public class StrategyFactory {
+    private final Provider<JobSlotStrategyHelper> strategyHelperProvider;
 
-    public static Strategy createStrategy(LoadbalancingStrategy strategyEnum, InterpreterDefaultContext context) {
+    @Inject
+    public StrategyFactory(Provider<JobSlotStrategyHelper> strategyHelperProvider) {
+        this.strategyHelperProvider = strategyHelperProvider;
+    }
+
+    public Strategy createStrategy(LoadbalancingStrategy strategyEnum, InterpreterDefaultContext context) {
         Strategy strategy;
 
         switch (strategyEnum) {
@@ -13,7 +22,7 @@ public class StrategyFactory {
             strategy = new RandomStrategy(context);
             break;
         case JOBSLOT_FIRSTFIT:
-            strategy = new JobSlotFirstFitStrategy(context);
+            strategy = new JobSlotFirstFitStrategy(context, strategyHelperProvider.get());
             break;
         default:
             strategy = null;

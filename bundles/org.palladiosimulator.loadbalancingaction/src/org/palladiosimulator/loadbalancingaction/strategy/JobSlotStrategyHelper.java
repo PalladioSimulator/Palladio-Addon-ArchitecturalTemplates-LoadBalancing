@@ -8,7 +8,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Stack;
 import java.util.stream.Stream;
-
+import javax.inject.Inject;
 import org.palladiosimulator.loadbalancingaction.loadbalancing.LoadbalancingBranchTransition;
 import org.palladiosimulator.pcm.allocation.Allocation;
 import org.palladiosimulator.pcm.allocation.AllocationContext;
@@ -21,31 +21,41 @@ import org.palladiosimulator.pcm.resourceenvironment.ResourceContainer;
 import org.palladiosimulator.pcm.seff.ExternalCallAction;
 import org.palladiosimulator.simulizar.exceptions.PCMModelInterpreterException;
 import org.palladiosimulator.simulizar.interpreter.InterpreterDefaultContext;
+import org.palladiosimulator.simulizar.runtimestate.ComponentInstanceRegistry;
 import org.palladiosimulator.simulizar.runtimestate.FQComponentID;
 import org.palladiosimulator.simulizar.runtimestate.SimulatedBasicComponentInstance;
+import org.palladiosimulator.simulizar.scopes.RuntimeExtensionScope;
 import org.palladiosimulator.simulizar.utils.SimulatedStackHelper;
 
 import de.uka.ipd.sdq.simucomframework.variables.StackContext;
 
+@RuntimeExtensionScope
 public class JobSlotStrategyHelper {
     public static final String MIDDLEWARE_PASSIVE_RESOURCE_COMPONENT_NAME = "MiddlewarePassiveResource";
     public static final String REQUIRED_SLOTS_PARAMETER_SPECIFICATION = "NUMBER_REQUIRED_RESOURCES.VALUE";
     public static final String COMPUTE_COMPONENT_NAME = "computeJob";
 
-    public static final List<JobSlotFirstFitStrategy> JOB_QUEUE = Collections
+    public final List<JobSlotFirstFitStrategy> jobQueue = Collections
             .synchronizedList(new ArrayList<JobSlotFirstFitStrategy>());
-    public static final Map<LoadbalancingBranchTransition, ResourceContainer> BRANCH_MAPPING = Collections
+    public final Map<LoadbalancingBranchTransition, ResourceContainer> branchMapping = Collections
             .synchronizedMap(new HashMap<LoadbalancingBranchTransition, ResourceContainer>());
-    public static final Map<ResourceContainer, Long> RESOURCE_CONTAINER_SLOTS = Collections
+    public final Map<ResourceContainer, Long> resourceContainerSlots = Collections
             .synchronizedMap(new HashMap<ResourceContainer, Long>());
     public static final int QUEUE_LENGTH_TO_SEARCH = 1;
 
     // TODO: determine via applied template which strategy is active
-    public static boolean isActive = false;
+    public boolean isActive = false;
 
-    public static AssemblyContext SYSTEM_ASSEMBLY_CONTEXT;
+    public AssemblyContext systemAssemblyContext;
+    
+    private final ComponentInstanceRegistry componentRegistry;
+    
+    @Inject
+    public JobSlotStrategyHelper(ComponentInstanceRegistry componentRegistry) {
+        this.componentRegistry = componentRegistry;
+    }
 
-    public static void jobFinished(AssemblyContext assemblyFinished, InterpreterDefaultContext context) {
+    public void jobFinished(AssemblyContext assemblyFinished, InterpreterDefaultContext context) {
         Allocation allocation = context.getLocalPCMModelAtContextCreation().getAllocation();
 
         ResourceContainer container = findResourceContainer(assemblyFinished, allocation);
@@ -56,32 +66,32 @@ public class JobSlotStrategyHelper {
 
         Long freeSlots = getPassiveResourceAvailable(passiveResource,
                 getFQComponentIDForMiddleware(middlewarePassiveAssembly), context);
-        RESOURCE_CONTAINER_SLOTS.put(container, freeSlots);
+        resourceContainerSlots.put(container, freeSlots);
 
         activateFitting(container);
     }
 
-    public static boolean hasToBeQueued(long requiredSlots) {
-        if (JOB_QUEUE.isEmpty()) {
+    public boolean hasToBeQueued(long requiredSlots) {
+        if (jobQueue.isEmpty()) {
             return false;
-        } else if (JOB_QUEUE.size() >= QUEUE_LENGTH_TO_SEARCH) {
+        } else if (jobQueue.size() >= QUEUE_LENGTH_TO_SEARCH) {
             return true;
         } else {
-            return JOB_QUEUE.stream().anyMatch(entry -> entry.getRequiredSlots() <= requiredSlots);
+            return jobQueue.stream().anyMatch(entry -> entry.getRequiredSlots() <= requiredSlots);
         }
     }
 
-    public static void reset() {
-        JOB_QUEUE.clear();
-        BRANCH_MAPPING.clear();
-        RESOURCE_CONTAINER_SLOTS.clear();
+    public void reset() {
+        jobQueue.clear();
+        branchMapping.clear();
+        resourceContainerSlots.clear();
         isActive = false;
-        SYSTEM_ASSEMBLY_CONTEXT = null;
+        systemAssemblyContext = null;
     }
 
-    public static ResourceContainer getResourceContainerForBranch(LoadbalancingBranchTransition branchTransition,
+    public ResourceContainer getResourceContainerForBranch(LoadbalancingBranchTransition branchTransition,
             InterpreterDefaultContext context) {
-        ResourceContainer container = JobSlotStrategyHelper.BRANCH_MAPPING.get(branchTransition);
+        ResourceContainer container = branchMapping.get(branchTransition);
         if (container == null) {
             AssemblyConnector assemblyConnectorToLoadbalanced = findAssemblyConnectorToLoadbalancedComponent(
                     branchTransition, context);
@@ -90,34 +100,34 @@ public class JobSlotStrategyHelper {
 
             container = findResourceContainer(loadbalancedAssemblyContext,
                     context.getLocalPCMModelAtContextCreation().getAllocation());
-            JobSlotStrategyHelper.BRANCH_MAPPING.put(branchTransition, container);
+            branchMapping.put(branchTransition, container);
         }
         return container;
     }
 
-    public static Long getFreeSlotsOfContainer(ResourceContainer container, InterpreterDefaultContext context) {
-        Long freeSlots = JobSlotStrategyHelper.RESOURCE_CONTAINER_SLOTS.get(container);
+    public Long getFreeSlotsOfContainer(ResourceContainer container, InterpreterDefaultContext context) {
+        Long freeSlots = resourceContainerSlots.get(container);
         if (freeSlots == null) {
-            freeSlots = JobSlotStrategyHelper.findFreeSlotsOfContainer(container, context);
-            JobSlotStrategyHelper.RESOURCE_CONTAINER_SLOTS.put(container, freeSlots);
+            freeSlots = findFreeSlotsOfContainer(container, context);
+            resourceContainerSlots.put(container, freeSlots);
         }
         return freeSlots;
     }
 
-    public static void activateFitting(ResourceContainer container) {
-        Long freeSlots = RESOURCE_CONTAINER_SLOTS.get(container);
+    public void activateFitting(ResourceContainer container) {
+        Long freeSlots = resourceContainerSlots.get(container);
         if ((long) freeSlots == 0) {
             return;
         }
         int i = 0;
         boolean found = false;
-        for (Iterator<JobSlotFirstFitStrategy> it = JOB_QUEUE.iterator(); it.hasNext() && i < QUEUE_LENGTH_TO_SEARCH;) {
+        for (Iterator<JobSlotFirstFitStrategy> it = jobQueue.iterator(); it.hasNext() && i < QUEUE_LENGTH_TO_SEARCH;) {
             JobSlotFirstFitStrategy job = it.next();
             if (job.getRequiredSlots() <= freeSlots) {
                 System.out.println("Found thread to wake up at position " + i);
                 found = true;
                 it.remove();
-                JobSlotStrategyHelper.RESOURCE_CONTAINER_SLOTS.put(container, freeSlots - job.getRequiredSlots());
+                resourceContainerSlots.put(container, freeSlots - job.getRequiredSlots());
 
                 activateJobOnContainer(job, container);
                 break;
@@ -134,17 +144,17 @@ public class JobSlotStrategyHelper {
         }
     }
 
-    private static void activateOnOtherContainer() {
-        JobSlotFirstFitStrategy job = JOB_QUEUE.get(0);
+    private void activateOnOtherContainer() {
+        JobSlotFirstFitStrategy job = jobQueue.get(0);
         boolean found = false;
-        for (Iterator<Map.Entry<ResourceContainer, Long>> it = RESOURCE_CONTAINER_SLOTS.entrySet().iterator(); it
+        for (Iterator<Map.Entry<ResourceContainer, Long>> it = resourceContainerSlots.entrySet().iterator(); it
                 .hasNext();) {
             Map.Entry<ResourceContainer, Long> entry = it.next();
             if (job.getRequiredSlots() <= entry.getValue()) {
                 System.out.println("Wake up thread.");
                 found = true;
-                JOB_QUEUE.remove(0);
-                JobSlotStrategyHelper.RESOURCE_CONTAINER_SLOTS.put(entry.getKey(), entry.getValue() - job.getRequiredSlots());
+                jobQueue.remove(0);
+                resourceContainerSlots.put(entry.getKey(), entry.getValue() - job.getRequiredSlots());
                 activateJobOnContainer(job, entry.getKey());
                 break;
             }
@@ -156,7 +166,7 @@ public class JobSlotStrategyHelper {
         }
     }
 
-    private static long findFreeSlotsOfContainer(ResourceContainer container, InterpreterDefaultContext context) {
+    private long findFreeSlotsOfContainer(ResourceContainer container, InterpreterDefaultContext context) {
         AssemblyContext middlewarePassiveAssembly = findMiddlewarePassiveAssembly(container,
                 context.getLocalPCMModelAtContextCreation().getAllocation());
         FQComponentID middlewareFQComponentID = getFQComponentIDForMiddleware(middlewarePassiveAssembly);
@@ -164,7 +174,7 @@ public class JobSlotStrategyHelper {
                 .getEncapsulatedComponent__AssemblyContext()).getPassiveResource_BasicComponent().get(0);
 
         long freeSlots;
-        if (isComponentRegistered(context, middlewareFQComponentID)) {
+        if (isComponentRegistered(middlewareFQComponentID)) {
             freeSlots = getPassiveResourceAvailable(passiveResource, middlewareFQComponentID, context);
         } else {
             freeSlots = getPassiveResourceCapacity(middlewarePassiveAssembly, passiveResource, context);
@@ -210,8 +220,8 @@ public class JobSlotStrategyHelper {
         return capacity;
     }
 
-    private static boolean isComponentRegistered(InterpreterDefaultContext context, FQComponentID fqID) {
-        return context.getRuntimeState().getComponentInstanceRegistry().hasComponentInstance(fqID);
+    private boolean isComponentRegistered(FQComponentID fqID) {
+        return componentRegistry.hasComponentInstance(fqID);
     }
 
     private static ResourceContainer findResourceContainer(AssemblyContext providingAssemblyContext,
@@ -225,9 +235,9 @@ public class JobSlotStrategyHelper {
                 .getResourceContainer_AllocationContext();
     }
 
-    private static FQComponentID getFQComponentIDForMiddleware(AssemblyContext middleware) {
+    private FQComponentID getFQComponentIDForMiddleware(AssemblyContext middleware) {
         Stack<AssemblyContext> assemblyStack = new Stack<AssemblyContext>();
-        assemblyStack.push(SYSTEM_ASSEMBLY_CONTEXT);
+        assemblyStack.push(systemAssemblyContext);
         assemblyStack.push(middleware);
         FQComponentID fqID = new FQComponentID(assemblyStack);
         return fqID;
@@ -251,10 +261,10 @@ public class JobSlotStrategyHelper {
         return middlewarePassiveAssembly;
     }
 
-    private static long getPassiveResourceAvailable(PassiveResource passiveResource,
-            FQComponentID middlewareFQComponentID, InterpreterDefaultContext context) {
-        SimulatedBasicComponentInstance simulatedInstance = ((SimulatedBasicComponentInstance) context.getRuntimeState()
-                .getComponentInstanceRegistry().getComponentInstance(middlewareFQComponentID));
+    private long getPassiveResourceAvailable(PassiveResource passiveResource, FQComponentID middlewareFQComponentID,
+            InterpreterDefaultContext context) {
+        SimulatedBasicComponentInstance simulatedInstance = ((SimulatedBasicComponentInstance) componentRegistry
+            .getComponentInstance(middlewareFQComponentID));
         return simulatedInstance.getAvailablePassiveResource(passiveResource, context);
     }
 }

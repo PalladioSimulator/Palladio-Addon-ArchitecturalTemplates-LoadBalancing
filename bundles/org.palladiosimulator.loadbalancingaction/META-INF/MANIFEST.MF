@@ -6,9 +6,8 @@ Bundle-Version: 4.3.0.qualifier
 Bundle-ClassPath: .
 Bundle-Vendor: %providerName
 Bundle-Localization: plugin
-Bundle-Activator: org.palladiosimulator.loadbalancingaction.activator.Activator
 Require-Bundle: org.eclipse.core.runtime,
- org.palladiosimulator.simulizar;bundle-version="2.1.0",
+ org.palladiosimulator.simulizar,
  org.eclipse.emf.ecore;visibility:=reexport,
  org.eclipse.emf.ecore.xmi;visibility:=reexport,
  de.uka.ipd.sdq.identifier;visibility:=reexport,
@@ -33,3 +32,7 @@ Export-Package: org.palladiosimulator.loadbalancingaction.rdseff,
  org.palladiosimulator.loadbalancingaction.loadbalancing.impl,
  org.palladiosimulator.loadbalancingaction.loadbalancing.util
 Automatic-Module-Name: org.palladiosimulator.loadbalancingaction
+Import-Package: dagger;version="2.31.0",
+ dagger.assisted;version="2.31.0",
+ dagger.internal;version="2.31.0",
+ javax.inject;version="1.0.0"

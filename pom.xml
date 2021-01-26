@@ -6,7 +6,7 @@
 	<parent>
 		<groupId>org.palladiosimulator</groupId>
 		<artifactId>eclipse-parent-updatesite</artifactId>
-		<version>0.5.1</version>
+		<version>0.7.3-SNAPSHOT</version>
 	</parent>
 	<groupId>org.palladiosimulator.loadbalancingaction</groupId>
 	<artifactId>parent</artifactId>	
@@ -23,5 +23,22 @@
 		<module>tests</module>
 		<module>releng</module>
 	</modules>
-	
+
+	<profiles>
+		<profile>
+			<id>nightly-snapshot-dependencies</id>
+			<activation>
+				<property>
+					<name>!release</name>
+				</property>
+			</activation>
+			<repositories>
+				<repository>
+					<id>sonatype-snapshots</id>
+					<url>https://oss.sonatype.org/content/repositories/snapshots/</url>
+				</repository>
+			</repositories> 
+		</profile>
+	</profiles>
+
 </project>
