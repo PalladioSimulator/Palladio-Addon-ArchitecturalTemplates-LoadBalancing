@@ -18,6 +18,7 @@ import org.palladiosimulator.simulizar.interpreter.RDSeffSwitchContributionFacto
 import org.palladiosimulator.simulizar.interpreter.RDSeffSwitchContributionFactory.RDSeffElementDispatcher;
 import org.palladiosimulator.simulizar.interpreter.listener.EventType;
 import org.palladiosimulator.simulizar.interpreter.listener.RDSEFFElementPassedEvent;
+import org.palladiosimulator.simulizar.interpreter.result.InterpreterResult;
 
 import dagger.assisted.Assisted;
 import dagger.assisted.AssistedFactory;
@@ -33,15 +34,15 @@ import dagger.assisted.AssistedInject;
  * @author Patrick Firnkes
  *
  */
-public class LoadbalancingRDSeffSwitch extends LoadbalancingSwitch<Object> {
+public class LoadbalancingRDSeffSwitch extends LoadbalancingSwitch<InterpreterResult> {
     @AssistedFactory
     public interface Factory extends RDSeffSwitchContributionFactory {
         LoadbalancingRDSeffSwitch create(InterpreterDefaultContext context,
-            RDSeffElementDispatcher<Object> parentSwitch);
+            RDSeffElementDispatcher parentSwitch);
         
         @Override
-        default Switch<Object> createRDSeffSwitch(InterpreterDefaultContext context,
-                RDSeffElementDispatcher<Object> parentSwitch) {
+        default Switch<InterpreterResult> createRDSeffSwitch(InterpreterDefaultContext context,
+                RDSeffElementDispatcher parentSwitch) {
             return create(context, parentSwitch);
         }
     }
@@ -51,13 +52,13 @@ public class LoadbalancingRDSeffSwitch extends LoadbalancingSwitch<Object> {
     private static final Boolean SUCCESS = true;
 
     private final InterpreterDefaultContext context;
-    private final RDSeffElementDispatcher<Object> parentSwitch;
+    private final RDSeffElementDispatcher parentSwitch;
     private final EventDispatcher eventDispatcher;
     private final StrategyFactory strategyFactory;
 
     @AssistedInject
     public LoadbalancingRDSeffSwitch(@Assisted InterpreterDefaultContext context,
-            @Assisted RDSeffElementDispatcher<Object> parentSwitch,
+            @Assisted RDSeffElementDispatcher parentSwitch,
             EventDispatcher eventDispatcher,
             StrategyFactory strategyFactory) {
         this.context = context;
@@ -68,7 +69,7 @@ public class LoadbalancingRDSeffSwitch extends LoadbalancingSwitch<Object> {
 
 
     @Override
-    public Object caseLoadbalancingResourceDemandingBehaviour(final LoadbalancingResourceDemandingBehaviour object) {
+    public InterpreterResult caseLoadbalancingResourceDemandingBehaviour(final LoadbalancingResourceDemandingBehaviour object) {
 
         AbstractAction currentAction = null;
         // interpret start action
@@ -93,11 +94,11 @@ public class LoadbalancingRDSeffSwitch extends LoadbalancingSwitch<Object> {
             this.firePassedEvent(currentAction, EventType.END);
             currentAction = currentAction.getSuccessor_AbstractAction();
         }
-        return SUCCESS;
+        return InterpreterResult.OK;
     }
 
     @Override
-    public Object caseLoadbalancingAction(LoadbalancingAction object) {
+    public InterpreterResult caseLoadbalancingAction(LoadbalancingAction object) {
         final EList<LoadbalancingBranchTransition> loadbalancerBranchTransitions = object.getBranches_Loadbalancing();
         if (loadbalancerBranchTransitions.isEmpty()) {
             throw new PCMModelInterpreterException("Empty load balancer action is not allowed: " + object + " Id: " + object.getId());
@@ -135,7 +136,7 @@ public class LoadbalancingRDSeffSwitch extends LoadbalancingSwitch<Object> {
             parentSwitch.doSwitch(loadBalancerBranchTransition.getBranchBehaviour_LoadbalancingBranchTransition());
         }
 
-        return SUCCESS;
+        return InterpreterResult.OK;
     }
     /**
      *
