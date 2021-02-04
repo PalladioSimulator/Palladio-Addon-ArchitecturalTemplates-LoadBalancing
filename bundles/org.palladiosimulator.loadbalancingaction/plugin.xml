@@ -17,15 +17,9 @@
             class="org.palladiosimulator.loadbalancingaction.loadbalancing.util.LoadbalancingResourceFactoryImpl"/>
    </extension>
    <extension
-         point="org.palladiosimulator.simulizar.interpreter.rdseffswitch">
-      <rdseffswitch
-            rdseffswitch="org.palladiosimulator.loadbalancingaction.rdseff.LoadbalancingRDSeffSwitchFactory">
-      </rdseffswitch>
-   </extension>
-   <extension
-         point="org.palladiosimulator.simulizar.runtimestate.runtimestateaccessor">
-      <runtimeStateAccessor
-            accessor="org.palladiosimulator.loadbalancingaction.observer.RuntimeStateAccessor">
-      </runtimeStateAccessor>
+         point="org.palladiosimulator.simulizar.extension.factory">
+      <component
+            factory="org.palladiosimulator.loadbalancingaction.di.LoadbalancingExtensionComponent$EclipseFactory">
+      </component>
    </extension>
 </plugin>

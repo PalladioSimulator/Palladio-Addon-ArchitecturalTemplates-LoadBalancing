@@ -5,8 +5,8 @@ import org.palladiosimulator.loadbalancingaction.loadbalancing.LoadbalancingBran
 import org.palladiosimulator.pcm.resourceenvironment.ResourceContainer;
 import org.palladiosimulator.simulizar.exceptions.PCMModelInterpreterException;
 import org.palladiosimulator.simulizar.interpreter.InterpreterDefaultContext;
+
 import de.uka.ipd.sdq.simucomframework.variables.StackContext;
-import org.palladiosimulator.loadbalancingaction.strategy.JobSlotStrategyHelper;
 
 /**
  * Determines branch transition based on the free job slots on the resource containers. If no slots
@@ -23,14 +23,16 @@ public class JobSlotFirstFitStrategy extends AbstractStrategy {
     private volatile ResourceContainer targetContainer;
     private Long requiredSlots;
     private volatile boolean wokeUp;
+    private final JobSlotStrategyHelper helper;
 
-    public JobSlotFirstFitStrategy(InterpreterDefaultContext context) {
+    public JobSlotFirstFitStrategy(InterpreterDefaultContext context, JobSlotStrategyHelper helper) {
         super(context);
+        this.helper = helper;
         wokeUp = false;
 
-        if (JobSlotStrategyHelper.SYSTEM_ASSEMBLY_CONTEXT == null) {
-            JobSlotStrategyHelper.SYSTEM_ASSEMBLY_CONTEXT = context.getAssemblyContextStack().get(0);
-            JobSlotStrategyHelper.isActive = true;
+        if (helper.systemAssemblyContext == null) {
+            helper.systemAssemblyContext = context.getAssemblyContextStack().get(0);
+            helper.isActive = true;
         }
     }
 
@@ -39,7 +41,7 @@ public class JobSlotFirstFitStrategy extends AbstractStrategy {
 
         requiredSlots = evaluateRequiredSlots();
 
-        if (JobSlotStrategyHelper.hasToBeQueued(requiredSlots)) {
+        if (helper.hasToBeQueued(requiredSlots)) {
             putJobInQueueAndPassivate();
         } else {
             LoadbalancingBranchTransition branchTransition = findBranchWithFreeSlots(branchTransitions, requiredSlots);
@@ -64,13 +66,13 @@ public class JobSlotFirstFitStrategy extends AbstractStrategy {
             EList<LoadbalancingBranchTransition> branchTransitions, Long requiredSlots) {
         for (LoadbalancingBranchTransition branchTransition : branchTransitions) {
 
-            ResourceContainer container = JobSlotStrategyHelper.getResourceContainerForBranch(branchTransition,
+            ResourceContainer container = helper.getResourceContainerForBranch(branchTransition,
                     context);
-            Long freeSlots = JobSlotStrategyHelper.getFreeSlotsOfContainer(container, context);
+            Long freeSlots = helper.getFreeSlotsOfContainer(container, context);
             long remainingSlots = freeSlots - requiredSlots;
 
             if (remainingSlots >= 0) {
-                JobSlotStrategyHelper.RESOURCE_CONTAINER_SLOTS.put(container, remainingSlots);
+                helper.resourceContainerSlots.put(container, remainingSlots);
                 return branchTransition;
             }
         }
@@ -80,11 +82,11 @@ public class JobSlotFirstFitStrategy extends AbstractStrategy {
     private LoadbalancingBranchTransition findBranchToContainer(
             EList<LoadbalancingBranchTransition> branchTransitions) {
         for (LoadbalancingBranchTransition branchTransition : branchTransitions) {
-            ResourceContainer container = JobSlotStrategyHelper.getResourceContainerForBranch(branchTransition,
+            ResourceContainer container = helper.getResourceContainerForBranch(branchTransition,
                     context);
             if (container.equals(targetContainer)) {
 
-                Long freeSlots = JobSlotStrategyHelper.getFreeSlotsOfContainer(container, context);
+                Long freeSlots = helper.getFreeSlotsOfContainer(container, context);
                 if (freeSlots < 0) {
                     throw new PCMModelInterpreterException("Job got scheduled on container with too less resources");
                 }
@@ -100,8 +102,8 @@ public class JobSlotFirstFitStrategy extends AbstractStrategy {
     }
 
     private void putJobInQueueAndPassivate() {
-        JobSlotStrategyHelper.JOB_QUEUE.add(this);
-        System.out.println("Put job to sleep. Queue Length: " + JobSlotStrategyHelper.JOB_QUEUE.size());
+        helper.jobQueue.add(this);
+        System.out.println("Put job to sleep. Queue Length: " + helper.jobQueue.size());
         context.getThread().passivate();
     }
 

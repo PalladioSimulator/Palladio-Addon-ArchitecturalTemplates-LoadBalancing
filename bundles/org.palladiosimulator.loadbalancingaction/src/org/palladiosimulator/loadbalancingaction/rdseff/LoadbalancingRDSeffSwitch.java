@@ -2,7 +2,6 @@ package org.palladiosimulator.loadbalancingaction.rdseff;
 
 import org.apache.log4j.Logger;
 import org.eclipse.emf.common.util.EList;
-import org.eclipse.emf.ecore.util.ComposedSwitch;
 import org.eclipse.emf.ecore.util.Switch;
 import org.palladiosimulator.loadbalancingaction.loadbalancing.LoadbalancingAction;
 import org.palladiosimulator.loadbalancingaction.loadbalancing.LoadbalancingBranchTransition;
@@ -13,11 +12,17 @@ import org.palladiosimulator.loadbalancingaction.strategy.StrategyFactory;
 import org.palladiosimulator.pcm.seff.AbstractAction;
 import org.palladiosimulator.pcm.seff.SeffPackage;
 import org.palladiosimulator.simulizar.exceptions.PCMModelInterpreterException;
-import org.palladiosimulator.simulizar.interpreter.IComposableSwitch;
+import org.palladiosimulator.simulizar.interpreter.EventDispatcher;
 import org.palladiosimulator.simulizar.interpreter.InterpreterDefaultContext;
+import org.palladiosimulator.simulizar.interpreter.RDSeffSwitchContributionFactory;
+import org.palladiosimulator.simulizar.interpreter.RDSeffSwitchContributionFactory.RDSeffElementDispatcher;
 import org.palladiosimulator.simulizar.interpreter.listener.EventType;
 import org.palladiosimulator.simulizar.interpreter.listener.RDSEFFElementPassedEvent;
-import org.palladiosimulator.simulizar.runtimestate.SimulatedBasicComponentInstance;
+import org.palladiosimulator.simulizar.interpreter.result.InterpreterResult;
+
+import dagger.assisted.Assisted;
+import dagger.assisted.AssistedFactory;
+import dagger.assisted.AssistedInject;
 
 /**
  * Extends the simulizar RDSeffSwitch using an extension point.
@@ -29,27 +34,42 @@ import org.palladiosimulator.simulizar.runtimestate.SimulatedBasicComponentInsta
  * @author Patrick Firnkes
  *
  */
-public class LoadbalancingRDSeffSwitch extends LoadbalancingSwitch<Object> implements IComposableSwitch {
+public class LoadbalancingRDSeffSwitch extends LoadbalancingSwitch<InterpreterResult> {
+    @AssistedFactory
+    public interface Factory extends RDSeffSwitchContributionFactory {
+        LoadbalancingRDSeffSwitch create(InterpreterDefaultContext context,
+            RDSeffElementDispatcher parentSwitch);
+        
+        @Override
+        default Switch<InterpreterResult> createRDSeffSwitch(InterpreterDefaultContext context,
+                RDSeffElementDispatcher parentSwitch) {
+            return create(context, parentSwitch);
+        }
+    }
+    
     protected static final Logger LOGGER = Logger.getLogger(LoadbalancingRDSeffSwitch.class);
 
     private static final Boolean SUCCESS = true;
 
     private final InterpreterDefaultContext context;
-    private final ComposedSwitch<Object> parentSwitch;
+    private final RDSeffElementDispatcher parentSwitch;
+    private final EventDispatcher eventDispatcher;
+    private final StrategyFactory strategyFactory;
 
-    public LoadbalancingRDSeffSwitch(InterpreterDefaultContext context,
-            SimulatedBasicComponentInstance basicComponentInstance, ComposedSwitch<Object> parentSwitch) {
+    @AssistedInject
+    public LoadbalancingRDSeffSwitch(@Assisted InterpreterDefaultContext context,
+            @Assisted RDSeffElementDispatcher parentSwitch,
+            EventDispatcher eventDispatcher,
+            StrategyFactory strategyFactory) {
         this.context = context;
         this.parentSwitch = parentSwitch;
+        this.eventDispatcher = eventDispatcher;
+        this.strategyFactory = strategyFactory;
     }
 
-    @Override
-    public Switch<Object> getParentSwitch() {
-        return parentSwitch;
-    }
 
     @Override
-    public Object caseLoadbalancingResourceDemandingBehaviour(final LoadbalancingResourceDemandingBehaviour object) {
+    public InterpreterResult caseLoadbalancingResourceDemandingBehaviour(final LoadbalancingResourceDemandingBehaviour object) {
 
         AbstractAction currentAction = null;
         // interpret start action
@@ -70,15 +90,15 @@ public class LoadbalancingRDSeffSwitch extends LoadbalancingSwitch<Object> imple
                 LOGGER.debug("Interpret " + currentAction.eClass().getName() + ": " + currentAction);
             }
             this.firePassedEvent(currentAction, EventType.BEGIN);
-            this.getParentSwitch().doSwitch(currentAction);
+            parentSwitch.doSwitch(currentAction);
             this.firePassedEvent(currentAction, EventType.END);
             currentAction = currentAction.getSuccessor_AbstractAction();
         }
-        return SUCCESS;
+        return InterpreterResult.OK;
     }
 
     @Override
-    public Object caseLoadbalancingAction(LoadbalancingAction object) {
+    public InterpreterResult caseLoadbalancingAction(LoadbalancingAction object) {
         final EList<LoadbalancingBranchTransition> loadbalancerBranchTransitions = object.getBranches_Loadbalancing();
         if (loadbalancerBranchTransitions.isEmpty()) {
             throw new PCMModelInterpreterException("Empty load balancer action is not allowed: " + object + " Id: " + object.getId());
@@ -98,7 +118,7 @@ public class LoadbalancingRDSeffSwitch extends LoadbalancingSwitch<Object> imple
             LOGGER.debug(sb.toString());
         }
 
-        final Strategy strategy = StrategyFactory.createStrategy(object.getLoadbalancingStrategy(), this.context);
+        final Strategy strategy = strategyFactory.createStrategy(object.getLoadbalancingStrategy(), this.context);
         if (strategy == null) {
             LOGGER.error("No load balancing strategy selected: " + object);
             throw new PCMModelInterpreterException("No load balancer balancing strategy selected. This is not allowed.");
@@ -113,10 +133,10 @@ public class LoadbalancingRDSeffSwitch extends LoadbalancingSwitch<Object> imple
             LOGGER.error("No branch selected: " + object);
             throw new PCMModelInterpreterException("No load balancer branch transition was active. This is not allowed.");
         } else {
-            this.getParentSwitch().doSwitch(loadBalancerBranchTransition.getBranchBehaviour_LoadbalancingBranchTransition());
+            parentSwitch.doSwitch(loadBalancerBranchTransition.getBranchBehaviour_LoadbalancingBranchTransition());
         }
 
-        return SUCCESS;
+        return InterpreterResult.OK;
     }
     /**
      *
@@ -124,7 +144,7 @@ public class LoadbalancingRDSeffSwitch extends LoadbalancingSwitch<Object> imple
      * @param eventType
      */
     private <T extends AbstractAction> void firePassedEvent(final T abstractAction, final EventType eventType) {
-        this.context.getRuntimeState().getEventNotificationHelper().firePassedEvent(new RDSEFFElementPassedEvent<T>(
+        eventDispatcher.firePassedEvent(new RDSEFFElementPassedEvent<T>(
                 abstractAction, eventType, this.context, this.context.getAssemblyContextStack().peek()));
     }
 

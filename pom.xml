@@ -23,5 +23,22 @@
 		<module>tests</module>
 		<module>releng</module>
 	</modules>
-	
+
+	<profiles>
+		<profile>
+			<id>nightly-snapshot-dependencies</id>
+			<activation>
+				<property>
+					<name>!release</name>
+				</property>
+			</activation>
+			<repositories>
+				<repository>
+					<id>sonatype-snapshots</id>
+					<url>https://oss.sonatype.org/content/repositories/snapshots/</url>
+				</repository>
+			</repositories> 
+		</profile>
+	</profiles>
+
 </project>
