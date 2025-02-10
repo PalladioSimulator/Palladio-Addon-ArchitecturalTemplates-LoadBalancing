@@ -1,7 +1,7 @@
 package org.palladiosimulator.loadbalancingaction.strategy;
 
-import javax.inject.Inject;
-import javax.inject.Provider;
+import jakarta.inject.Inject;
+import jakarta.inject.Provider;
 
 import org.palladiosimulator.loadbalancingaction.loadbalancing.LoadbalancingStrategy;
 import org.palladiosimulator.simulizar.interpreter.InterpreterDefaultContext;
