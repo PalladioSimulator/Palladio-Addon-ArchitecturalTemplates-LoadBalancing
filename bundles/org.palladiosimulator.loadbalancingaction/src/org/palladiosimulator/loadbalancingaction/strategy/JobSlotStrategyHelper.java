@@ -19,7 +19,7 @@ import org.palladiosimulator.pcm.repository.PassiveResource;
 import org.palladiosimulator.pcm.repository.RequiredRole;
 import org.palladiosimulator.pcm.resourceenvironment.ResourceContainer;
 import org.palladiosimulator.pcm.seff.ExternalCallAction;
-import org.palladiosimulator.simulizar.di.scopes.RuntimeExtensionScope;
+import org.palladiosimulator.simulizar.di.core.scopes.RuntimeExtensionScope;
 import org.palladiosimulator.simulizar.exceptions.PCMModelInterpreterException;
 import org.palladiosimulator.simulizar.interpreter.InterpreterDefaultContext;
 import org.palladiosimulator.simulizar.runtimestate.ComponentInstanceRegistry;
