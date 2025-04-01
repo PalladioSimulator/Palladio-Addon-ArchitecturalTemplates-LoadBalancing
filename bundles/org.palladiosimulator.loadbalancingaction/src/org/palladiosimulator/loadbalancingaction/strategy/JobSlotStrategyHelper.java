@@ -19,12 +19,12 @@ import org.palladiosimulator.pcm.repository.PassiveResource;
 import org.palladiosimulator.pcm.repository.RequiredRole;
 import org.palladiosimulator.pcm.resourceenvironment.ResourceContainer;
 import org.palladiosimulator.pcm.seff.ExternalCallAction;
+import org.palladiosimulator.simulizar.di.base.scopes.RuntimeExtensionScope;
 import org.palladiosimulator.simulizar.exceptions.PCMModelInterpreterException;
 import org.palladiosimulator.simulizar.interpreter.InterpreterDefaultContext;
 import org.palladiosimulator.simulizar.runtimestate.ComponentInstanceRegistry;
 import org.palladiosimulator.simulizar.runtimestate.FQComponentID;
 import org.palladiosimulator.simulizar.runtimestate.SimulatedBasicComponentInstance;
-import org.palladiosimulator.simulizar.scopes.RuntimeExtensionScope;
 import org.palladiosimulator.simulizar.utils.SimulatedStackHelper;
 
 import de.uka.ipd.sdq.simucomframework.variables.StackContext;
