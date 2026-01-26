@@ -2,7 +2,7 @@ Manifest-Version: 1.0
 Bundle-ManifestVersion: 2
 Bundle-Name: %pluginName
 Bundle-SymbolicName: org.palladiosimulator.loadbalancingaction;singleton:=true
-Bundle-Version: 5.2.2
+Bundle-Version: 6.0.0.qualifier
 Bundle-ClassPath: .
 Bundle-Vendor: %providerName
 Bundle-Localization: plugin
@@ -16,13 +16,13 @@ Require-Bundle: org.eclipse.core.runtime,
  de.uka.ipd.sdq.stoex;visibility:=reexport,
  de.uka.ipd.sdq.units;visibility:=reexport,
  org.apache.log4j,
- de.uka.ipd.sdq.simucomframework;bundle-version="4.1.1",
- de.uka.ipd.sdq.simucomframework.variables;bundle-version="4.1.0",
- org.palladiosimulator.commons;bundle-version="1.0.1",
+ de.uka.ipd.sdq.simucomframework,
+ de.uka.ipd.sdq.simucomframework.variables,
+ org.palladiosimulator.commons,
  org.palladiosimulator.analyzer.workflow,
  org.palladiosimulator.analyzer.completions,
  org.palladiosimulator.simulizar.action,
- de.uka.ipd.sdq.simulation.abstractsimengine;bundle-version="4.1.0",
+ de.uka.ipd.sdq.simulation.abstractsimengine,
  org.palladiosimulator.simulizar.runtimemeasurement,
  org.palladiosimulator.pcm.edp2.measuringpoint
 Bundle-ActivationPolicy: lazy

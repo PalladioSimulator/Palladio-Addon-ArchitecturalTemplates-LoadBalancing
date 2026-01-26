@@ -2,12 +2,12 @@ Manifest-Version: 1.0
 Bundle-ManifestVersion: 2
 Bundle-Name: Architectural Templates - Loadbalanging Action Catalog
 Bundle-SymbolicName: org.palladiosimulator.loadbalancingaction.catalog;singleton:=true
-Bundle-Version: 5.2.2
+Bundle-Version: 6.0.0.qualifier
 Bundle-Activator: org.palladiosimulator.loadbalancingaction.catalog.Activator
 Bundle-Vendor: palladiosimulator.org
-Require-Bundle: org.palladiosimulator.loadbalancingaction;bundle-version="5.2.2",
- org.palladiosimulator.architecturaltemplates.catalog;bundle-version="1.1.1",
- org.palladiosimulator.architecturaltemplates;bundle-version="1.1.1"
+Require-Bundle: org.palladiosimulator.loadbalancingaction,
+ org.palladiosimulator.architecturaltemplates.catalog,
+ org.palladiosimulator.architecturaltemplates
 Bundle-RequiredExecutionEnvironment: JavaSE-17
 Bundle-ActivationPolicy: lazy
 Automatic-Module-Name: org.palladiosimulator.loadbalancingaction.catalog
