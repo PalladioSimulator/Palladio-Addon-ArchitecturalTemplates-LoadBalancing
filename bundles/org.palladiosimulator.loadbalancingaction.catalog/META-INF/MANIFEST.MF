@@ -8,6 +8,6 @@ Bundle-Vendor: palladiosimulator.org
 Require-Bundle: org.palladiosimulator.loadbalancingaction,
  org.palladiosimulator.architecturaltemplates.catalog,
  org.palladiosimulator.architecturaltemplates
-Bundle-RequiredExecutionEnvironment: JavaSE-17
+Bundle-RequiredExecutionEnvironment: JavaSE-21
 Bundle-ActivationPolicy: lazy
 Automatic-Module-Name: org.palladiosimulator.loadbalancingaction.catalog
