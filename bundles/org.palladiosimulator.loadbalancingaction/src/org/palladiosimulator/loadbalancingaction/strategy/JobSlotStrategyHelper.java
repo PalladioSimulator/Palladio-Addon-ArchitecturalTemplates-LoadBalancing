@@ -8,7 +8,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Stack;
 import java.util.stream.Stream;
-import javax.inject.Inject;
+import jakarta.inject.Inject;
 import org.palladiosimulator.loadbalancingaction.loadbalancing.LoadbalancingBranchTransition;
 import org.palladiosimulator.pcm.allocation.Allocation;
 import org.palladiosimulator.pcm.allocation.AllocationContext;
